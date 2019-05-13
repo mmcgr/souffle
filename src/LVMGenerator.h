@@ -193,6 +193,7 @@ protected:
         code->push_back(LVM_UserDefinedOperator);
         code->push_back(symbolTable.lookup(op.getName()));
         code->push_back(symbolTable.lookup(op.getType()));
+        code->push_back(op.getArgCount());
     }
 
     void visitPackRecord(const RamPackRecord& pack, size_t exitAddress) override {

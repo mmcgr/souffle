@@ -199,7 +199,7 @@ void LVMCode::print() const {
                 printf("%ld\tLVM_UserDefinedOperator\n", ip);
                 printf("\t%s\t%s\t\n", symbolTable.resolve(code[ip + 1]).c_str(),
                         symbolTable.resolve(code[ip + 2]).c_str());
-                ip += 3;
+                ip += 4;
                 break;
             }
             case LVM_PackRecord: {

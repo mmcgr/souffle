@@ -280,8 +280,7 @@ AC_CONFIG_LINKS([utilities/bash-completion/completions/souffle:debian/souffle.ba
 AM_MISSING_PROG([AUTOM4TE], [autom4te])
 
 # Checks for header files.
-AC_FUNC_ALLOCA
-AC_CHECK_HEADERS([arpa/inet.h fcntl.h float.h inttypes.h libintl.h limits.h malloc.h memory.h netdb.h stddef.h stdint.h stdlib.h string.h strings.h sys/time.h sys/timeb.h unistd.h wchar.h wctype.h])
+AC_CHECK_HEADERS([stdlib.h string.h sys/time.h unistd.h])
 
 SOUFFLE_CXXFLAGS="$CXXFLAGS"
 AC_SUBST(SOUFFLE_CXXFLAGS)

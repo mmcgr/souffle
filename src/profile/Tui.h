@@ -264,7 +264,7 @@ public:
         bool firstRow = true;
         auto rows = relationTable.getRows();
         std::stable_sort(rows.begin(), rows.end(), [](std::shared_ptr<Row> left, std::shared_ptr<Row> right) {
-            return (*left)[0]->getDoubleVal() > (*right)[0]->getDoubleVal();
+            return left->getDoubleValue(0) > right->getDoubleValue(0);
         });
         maxRows = std::min(rows.size(), maxRows);
 
@@ -272,28 +272,28 @@ public:
             comma(firstRow, ",\n");
 
             Row& row = *rows[i];
-            ss << '"' << row[6]->toString(0) << R"_(": [)_";
-            ss << '"' << Tools::cleanJsonOut(row[5]->toString(0)) << R"_(", )_";
-            ss << '"' << Tools::cleanJsonOut(row[6]->toString(0)) << R"_(", )_";
-            ss << row[0]->getDoubleVal() << ", ";
-            ss << row[1]->getDoubleVal() << ", ";
-            ss << row[2]->getDoubleVal() << ", ";
-            ss << row[3]->getDoubleVal() << ", ";
-            ss << row[4]->getLongVal() << ", ";
-            ss << row[12]->getLongVal() << ", ";
-            ss << '"' << Tools::cleanJsonOut(row[7]->toString(0)) << R"_(", [)_";
+            ss << '"' << row.valueToString(6, 0) << R"_(": [)_";
+            ss << '"' << Tools::cleanJsonOut(row.valueToString(5, 0)) << R"_(", )_";
+            ss << '"' << Tools::cleanJsonOut(row.valueToString(6, 0)) << R"_(", )_";
+            ss << row.getDoubleValue(0) << ", ";
+            ss << row.getDoubleValue(1) << ", ";
+            ss << row.getDoubleValue(2) << ", ";
+            ss << row.getDoubleValue(3) << ", ";
+            ss << row.getLongValue(4) << ", ";
+            ss << row.getLongValue(12) << ", ";
+            ss << '"' << Tools::cleanJsonOut(row.valueToString(7, 0)) << R"_(", [)_";
 
             bool firstCol = true;
             for (auto& _rel_row : ruleTable.getRows()) {
                 Row rel_row = *_rel_row;
-                if (rel_row[7]->toString(0) == row[5]->toString(0)) {
+                if (rel_row.valueToString(7, 0) == row.valueToString(5, 0)) {
                     comma(firstCol);
-                    ss << '"' << rel_row[6]->toString(0) << '"';
+                    ss << '"' << rel_row.valueToString(6, 0) << '"';
                 }
             }
             ss << "], ";
             std::vector<std::shared_ptr<Iteration>> iter =
-                    run->getRelation(row[5]->toString(0))->getIterations();
+                    run->getRelation(row.valueToString(5, 0))->getIterations();
             ss << R"_({"tot_t": [)_";
             firstCol = true;
             for (auto& i : iter) {
@@ -335,37 +335,37 @@ public:
         bool firstRow = true;
         auto rows = ruleTable.getRows();
         std::stable_sort(rows.begin(), rows.end(), [](std::shared_ptr<Row> left, std::shared_ptr<Row> right) {
-            return (*left)[0]->getDoubleVal() > (*right)[0]->getDoubleVal();
+            return (*left).getDoubleValue(0) > (*right).getDoubleValue(0);
         });
         maxRows = std::min(rows.size(), maxRows);
 
         for (size_t i = 0; i < maxRows; ++i) {
             Row& row = *rows[i];
 
-            std::vector<std::string> part = Tools::split(row[6]->toString(0), ".");
+            std::vector<std::string> part = Tools::split(row.valueToString(6, 0), ".");
             std::string strRel = "R" + part[0].substr(1);
-            Table versionTable = out.getVersions(strRel, row[6]->toString(0));
+            Table versionTable = out.getVersions(strRel, row.valueToString(6, 0));
 
             std::string src;
             if (versionTable.rows.size() > 0) {
                 if (versionTable.rows[0]->cells[9] != nullptr) {
-                    src = (*versionTable.rows[0])[9]->toString(0);
+                    src = (*versionTable.rows[0]).valueToString(9, 0);
                 } else {
                     src = "-";
                 }
             } else {
-                src = row[10]->toString(-1);
+                src = row.valueToString(10, -1);
             }
             comma(firstRow);
             ss << "\n ";
 
-            ss << '"' << row[6]->toString(0) << R"_(": [)_";
-            ss << '"' << Tools::cleanJsonOut(row[5]->toString(0)) << R"_(", )_";
-            ss << '"' << Tools::cleanJsonOut(row[6]->toString(0)) << R"_(", )_";
-            ss << row[0]->getDoubleVal() << ", ";
-            ss << row[1]->getDoubleVal() << ", ";
-            ss << row[2]->getDoubleVal() << ", ";
-            ss << row[4]->getLongVal() << ", ";
+            ss << '"' << row.valueToString(6, 0) << R"_(": [)_";
+            ss << '"' << Tools::cleanJsonOut(row.valueToString(5, 0)) << R"_(", )_";
+            ss << '"' << Tools::cleanJsonOut(row.valueToString(6, 0)) << R"_(", )_";
+            ss << row.getDoubleValue(0) << ", ";
+            ss << row.getDoubleValue(1) << ", ";
+            ss << row.getDoubleValue(2) << ", ";
+            ss << row.getLongValue(4) << ", ";
 
             ss << '"' << src << R"_(", )_";
             ss << "[";
@@ -377,32 +377,32 @@ public:
                 has_ver = true;
                 Row ver_row = *_ver_row;
                 ss << '[';
-                ss << '"' << Tools::cleanJsonOut(ver_row[5]->toString(0)) << R"_(", )_";
-                ss << '"' << Tools::cleanJsonOut(ver_row[6]->toString(0)) << R"_(", )_";
-                ss << ver_row[0]->getDoubleVal() << ", ";
-                ss << ver_row[1]->getDoubleVal() << ", ";
-                ss << ver_row[2]->getDoubleVal() << ", ";
-                ss << ver_row[4]->getLongVal() << ", ";
+                ss << '"' << Tools::cleanJsonOut(ver_row.valueToString(5, 0)) << R"_(", )_";
+                ss << '"' << Tools::cleanJsonOut(ver_row.valueToString(6, 0)) << R"_(", )_";
+                ss << ver_row.getDoubleValue(0) << ", ";
+                ss << ver_row.getDoubleValue(1) << ", ";
+                ss << ver_row.getDoubleValue(2) << ", ";
+                ss << ver_row.getLongValue(4) << ", ";
                 ss << '"' << src << R"_(", )_";
-                ss << ver_row[8]->getLongVal();
+                ss << ver_row.getLongValue(8);
                 ss << ']';
             }
 
             ss << "], ";
 
-            if (row[6]->toString(0).at(0) != 'C') {
+            if (row.valueToString(6, 0).at(0) != 'C') {
                 ss << "{}, {}]";
             } else {
                 ss << R"_({"tot_t": [)_";
 
                 std::vector<uint64_t> iteration_tuples;
                 bool firstCol = true;
-                for (auto& i : run->getRelation(row[7]->toString(0))->getIterations()) {
+                for (auto& i : run->getRelation(row.valueToString(7, 0))->getIterations()) {
                     bool add = false;
                     std::chrono::microseconds totalTime{};
                     uint64_t totalSize = 0L;
                     for (auto& rul : i->getRules()) {
-                        if (rul.second->getId() == row[6]->toString(0)) {
+                        if (rul.second->getId() == row.valueToString(6, 0)) {
                             totalTime += rul.second->getRuntime();
 
                             totalSize += rul.second->size();
@@ -430,14 +430,14 @@ public:
                     firstCol = true;
                     for (auto& row : versionTable.rows) {
                         comma(firstCol);
-                        ss << (*row)[0]->getDoubleVal();
+                        ss << (*row).getDoubleValue(0);
                     }
                     ss << R"_(], "tuples": [)_";
 
                     firstCol = true;
                     for (auto& row : versionTable.rows) {
                         comma(firstCol);
-                        ss << (*row)[4]->getLongVal();
+                        ss << (*row).getLongValue(4);
                     }
                     ss << ']';
                 }
@@ -459,7 +459,7 @@ public:
             }
         };
 
-        std::string source_loc = (*relationTable.getRows()[0])[7]->getStringVal();
+        std::string source_loc = (*relationTable.getRows()[0]).getStringValue(7);
         std::string source_file_loc = Tools::split(source_loc, " ").at(0);
         std::ifstream source_file(source_file_loc);
         if (!source_file.is_open()) {
@@ -1027,10 +1027,10 @@ public:
                 "tuples generated");
 
         std::printf("%11s%10s%10s%10s%10s%14s\n", run->getRuntime().c_str(),
-                run->formatTime(run->getTotalLoadtime()).c_str(),
-                run->formatTime(run->getTotalSavetime()).c_str(), run->formatNum(0, totalRelations).c_str(),
-                run->formatNum(0, totalRules).c_str(),
-                run->formatNum(precision, run->getTotalSize()).c_str());
+                Tools::formatTime(run->getTotalLoadtime()).c_str(),
+                Tools::formatTime(run->getTotalSavetime()).c_str(),
+                Tools::formatNum(0, totalRelations).c_str(), Tools::formatNum(0, totalRules).c_str(),
+                Tools::formatNum(precision, run->getTotalSize()).c_str());
 
         // Progress bar
         // Determine number of relations processed
@@ -1193,7 +1193,7 @@ public:
         if (found) {
             if (versionTable.rows.size() > 0) {
                 if (versionTable.rows[0]->cells[9] != nullptr) {
-                    std::cout << "Src locator-: " << (*versionTable.rows[0])[9]->getStringVal() << "\n\n";
+                    std::cout << "Src locator-: " << (*versionTable.rows[0]).getStringValue(9) << "\n\n";
                 } else {
                     std::cout << "Src locator-: -\n\n";
                 }
@@ -1215,10 +1215,10 @@ public:
         for (auto& _row : versionTable.rows) {
             Row row = *_row;
 
-            std::printf("%8s%8s%8s%16s%6s\n", row[0]->toString(precision).c_str(),
-                    row[1]->toString(precision).c_str(), row[2]->toString(precision).c_str(),
-                    row[4]->toString(precision).c_str(), row[8]->toString(precision).c_str());
-            Table atom_table = out.getVersionAtoms(strRel, srcLocator, row[8]->getLongVal());
+            std::printf("%8s%8s%8s%16s%6s\n", row.valueToString(0, precision).c_str(),
+                    row.valueToString(1, precision).c_str(), row.valueToString(2, precision).c_str(),
+                    row.valueToString(4, precision).c_str(), row.valueToString(8, precision).c_str());
+            Table atom_table = out.getVersionAtoms(strRel, srcLocator, row.getLongValue(8));
             verAtoms(atom_table);
         }
 
@@ -1353,26 +1353,26 @@ public:
         std::string strRel = "R" + part[0].substr(1);
 
         Table versionTable = out.getVersions(strRel, c);
-        std::printf("%6s%2s%s\n\n", (*versionTable.rows[0])[6]->toString(0).c_str(), "",
-                (*versionTable.rows[0])[5]->toString(0).c_str());
+        std::printf("%6s%2s%s\n\n", (*versionTable.rows[0]).valueToString(6, 0).c_str(), "",
+                (*versionTable.rows[0]).valueToString(5, 0).c_str());
         if (col == "tot_t") {
             std::vector<std::chrono::microseconds> list;
             for (auto& row : versionTable.rows) {
-                list.emplace_back((*row)[0]->getTimeVal());
+                list.emplace_back((*row).getTimeValue(0));
             }
             std::printf("%4s   %s\n\n", "NO", "RUNTIME");
             graphByTime(list);
         } else if (col == "copy_t") {
             std::vector<std::chrono::microseconds> list;
             for (auto& row : versionTable.rows) {
-                list.emplace_back((*row)[3]->getTimeVal());
+                list.emplace_back((*row).getTimeValue(3));
             }
             std::printf("%4s   %s\n\n", "NO", "COPYTIME");
             graphByTime(list);
         } else if (col == "tuples") {
             std::vector<size_t> list;
             for (auto& row : versionTable.rows) {
-                list.emplace_back((*row)[4]->getLongVal());
+                list.emplace_back((*row).getLongValue(4));
             }
             std::printf("%4s   %s\n\n", "NO", "TUPLES");
             graphBySize(list);
@@ -1433,22 +1433,22 @@ protected:
         std::string lastRule = ruleName;
         for (auto& _row : atomTable.rows) {
             Row& row = *_row;
-            std::string rule = row[0]->toString(precision);
+            std::string rule = row.valueToString(0, precision);
             if (rule != lastRule) {
                 lastRule = rule;
-                std::cout << "     " << row[0]->toString(precision) << std::endl;
+                std::cout << "     " << row.valueToString(0, precision) << std::endl;
                 firstRun = true;
             }
             if (firstRun) {
                 std::printf("      %-16s%-16s%s\n", "FREQ", "RELSIZE", "ATOM");
                 firstRun = false;
             }
-            std::string relationName = row[1]->getStringVal();
+            std::string relationName = row.getStringValue(1);
             relationName = relationName.substr(0, relationName.find('('));
             auto* relation = out.getProgramRun()->getRelation(relationName);
             std::string relationSize = relation == nullptr ? "--" : std::to_string(relation->size());
-            std::printf("      %-16s%-16s%s\n", row[3]->toString(precision).c_str(), relationSize.c_str(),
-                    row[1]->getStringVal().c_str());
+            std::printf("      %-16s%-16s%s\n", row.valueToString(3, precision).c_str(), relationSize.c_str(),
+                    row.getStringValue(1).c_str());
         }
         std::cout << '\n';
     }

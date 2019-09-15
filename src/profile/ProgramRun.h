@@ -64,7 +64,7 @@ public:
         if (startTime == endTime) {
             return "--";
         }
-        return formatTime(endTime - startTime);
+        return Tools::formatTime(endTime - startTime);
     }
 
     std::chrono::microseconds getStarttime() const {
@@ -139,18 +139,6 @@ public:
             }
         }
         return result;
-    }
-
-    inline std::string formatTime(std::chrono::microseconds runtime) const {
-        return Tools::formatTime(runtime);
-    }
-
-    inline std::string formatNum(int precision, long number) const {
-        return Tools::formatNum(precision, number);
-    }
-
-    inline std::vector<std::vector<std::string>> formatTable(Table& table, int precision) const {
-        return Tools::formatTable(table, precision);
     }
 };
 

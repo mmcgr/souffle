@@ -8,12 +8,9 @@
 
 #pragma once
 
-#include "CellInterface.h"
 #include "Row.h"
 
-#include <cmath>
 #include <memory>
-#include <vector>
 
 namespace souffle {
 namespace profile {

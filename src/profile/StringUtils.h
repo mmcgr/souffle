@@ -160,15 +160,7 @@ inline std::string formatTime(std::chrono::microseconds number) {
 inline std::vector<std::vector<std::string>> formatTable(Table table, int precision) {
     std::vector<std::vector<std::string>> result;
     for (auto& row : table.getRows()) {
-        std::vector<std::string> result_row;
-        for (auto& cell : row->getCells()) {
-            if (cell != nullptr) {
-                result_row.push_back(cell->toString(precision));
-            } else {
-                result_row.push_back("-");
-            }
-        }
-        result.push_back(result_row);
+        result.push_back(row->toStringVector(precision));
     }
     return result;
 }

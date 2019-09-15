@@ -31,16 +31,39 @@ public:
         }
     }
 
-    std::shared_ptr<CellInterface>& operator[](unsigned long i) {
-        return cells.at(i);
+    inline std::vector<std::string> toStringVector(int precision) const {
+        std::vector<std::string> strings;
+        for (auto& cell : cells) {
+            strings.push_back(cell->toString(precision));
+        }
+        return strings;
     }
 
-    //    void addCell(int location, std::shared_ptr<CellInterface> cell) {
-    //        cells[location] = cell;
-    //    }
+    inline void setCell(size_t i, std::shared_ptr<CellInterface> cell) {
+        cells.at(i) = cell;
+    }
 
-    inline std::vector<std::shared_ptr<CellInterface>> getCells() {
-        return cells;
+    inline std::string valueToString(size_t i, int precision) {
+        if (cells.at(i) == nullptr) {
+            return "-";
+        }
+        return cells.at(i)->toString(precision);
+    }
+
+    inline double getDoubleValue(size_t i) {
+        return cells.at(i)->getDoubleVal();
+    }
+
+    inline long getLongValue(size_t i) {
+        return cells.at(i)->getLongVal();
+    }
+
+    inline std::string getStringValue(size_t i) {
+        return cells.at(i)->getStringVal();
+    }
+
+    inline std::chrono::microseconds getTimeValue(size_t i) {
+        return cells.at(i)->getTimeVal();
     }
 };
 

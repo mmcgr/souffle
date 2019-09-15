@@ -79,23 +79,23 @@ Table inline OutputProcessor::getRelTable() const {
         std::shared_ptr<Relation> r = rel.second;
         Row row(13);
         auto total_time = r->getNonRecTime() + r->getRecTime() + r->getCopyTime();
-        row[0] = std::make_shared<Cell<std::chrono::microseconds>>(total_time);
-        row[1] = std::make_shared<Cell<std::chrono::microseconds>>(r->getNonRecTime());
-        row[2] = std::make_shared<Cell<std::chrono::microseconds>>(r->getRecTime());
-        row[3] = std::make_shared<Cell<std::chrono::microseconds>>(r->getCopyTime());
-        row[4] = std::make_shared<Cell<long>>(r->size());
-        row[5] = std::make_shared<Cell<std::string>>(r->getName());
-        row[6] = std::make_shared<Cell<std::string>>(r->getId());
-        row[7] = std::make_shared<Cell<std::string>>(r->getLocator());
+        row.setCell(0, std::make_shared<Cell<std::chrono::microseconds>>(total_time));
+        row.setCell(1, std::make_shared<Cell<std::chrono::microseconds>>(r->getNonRecTime()));
+        row.setCell(2, std::make_shared<Cell<std::chrono::microseconds>>(r->getRecTime()));
+        row.setCell(3, std::make_shared<Cell<std::chrono::microseconds>>(r->getCopyTime()));
+        row.setCell(4, std::make_shared<Cell<long>>(r->size()));
+        row.setCell(5, std::make_shared<Cell<std::string>>(r->getName()));
+        row.setCell(6, std::make_shared<Cell<std::string>>(r->getId()));
+        row.setCell(7, std::make_shared<Cell<std::string>>(r->getLocator()));
         if (total_time.count() != 0) {
-            row[8] = std::make_shared<Cell<long>>(r->size() / (total_time.count() / 1000000.0));
+            row.setCell(8, std::make_shared<Cell<long>>(r->size() / (total_time.count() / 1000000.0)));
         } else {
-            row[8] = std::make_shared<Cell<long>>(r->size());
+            row.setCell(8, std::make_shared<Cell<long>>(r->size()));
         }
-        row[9] = std::make_shared<Cell<std::chrono::microseconds>>(r->getLoadtime());
-        row[10] = std::make_shared<Cell<std::chrono::microseconds>>(r->getSavetime());
-        row[11] = std::make_shared<Cell<long>>(r->getMaxRSSDiff());
-        row[12] = std::make_shared<Cell<long>>(r->getReads());
+        row.setCell(9, std::make_shared<Cell<std::chrono::microseconds>>(r->getLoadtime()));
+        row.setCell(10, std::make_shared<Cell<std::chrono::microseconds>>(r->getSavetime()));
+        row.setCell(11, std::make_shared<Cell<long>>(r->getMaxRSSDiff()));
+        row.setCell(12, std::make_shared<Cell<long>>(r->getReads()));
 
         table.addRow(std::make_shared<Row>(row));
     }
@@ -124,16 +124,16 @@ Table inline OutputProcessor::getRulTable() const {
         for (auto& current : rel.second->getRuleMap()) {
             Row row(11);
             std::shared_ptr<Rule> rule = current.second;
-            row[0] = std::make_shared<Cell<std::chrono::microseconds>>(rule->getRuntime());
-            row[1] = std::make_shared<Cell<std::chrono::microseconds>>(rule->getRuntime());
-            row[2] = std::make_shared<Cell<std::chrono::microseconds>>(std::chrono::microseconds(0));
-            row[3] = std::make_shared<Cell<std::chrono::microseconds>>(std::chrono::microseconds(0));
-            row[4] = std::make_shared<Cell<long>>(rule->size());
-            row[5] = std::make_shared<Cell<std::string>>(rule->getName());
-            row[6] = std::make_shared<Cell<std::string>>(rule->getId());
-            row[7] = std::make_shared<Cell<std::string>>(rel.second->getName());
-            row[8] = std::make_shared<Cell<long>>(0);
-            row[10] = std::make_shared<Cell<std::string>>(rule->getLocator());
+            row.setCell(0, std::make_shared<Cell<std::chrono::microseconds>>(rule->getRuntime()));
+            row.setCell(1, std::make_shared<Cell<std::chrono::microseconds>>(rule->getRuntime()));
+            row.setCell(2, std::make_shared<Cell<std::chrono::microseconds>>(std::chrono::microseconds(0)));
+            row.setCell(3, std::make_shared<Cell<std::chrono::microseconds>>(std::chrono::microseconds(0)));
+            row.setCell(4, std::make_shared<Cell<long>>(rule->size()));
+            row.setCell(5, std::make_shared<Cell<std::string>>(rule->getName()));
+            row.setCell(6, std::make_shared<Cell<std::string>>(rule->getId()));
+            row.setCell(7, std::make_shared<Cell<std::string>>(rel.second->getName()));
+            row.setCell(8, std::make_shared<Cell<long>>(0));
+            row.setCell(10, std::make_shared<Cell<std::string>>(rule->getLocator()));
             ruleMap.emplace(rule->getName(), std::make_shared<Row>(row));
         }
         for (auto& iter : rel.second->getIterations()) {
@@ -141,24 +141,26 @@ Table inline OutputProcessor::getRulTable() const {
                 std::shared_ptr<Rule> rule = current.second;
                 if (ruleMap.find(rule->getName()) != ruleMap.end()) {
                     Row row = *ruleMap[rule->getName()];
-                    row[2] = std::make_shared<Cell<std::chrono::microseconds>>(
-                            row[2]->getTimeVal() + rule->getRuntime());
-                    row[4] = std::make_shared<Cell<long>>(row[4]->getLongVal() + rule->size());
-                    row[0] = std::make_shared<Cell<std::chrono::microseconds>>(
-                            row[0]->getTimeVal() + rule->getRuntime());
+                    row.setCell(2, std::make_shared<Cell<std::chrono::microseconds>>(
+                                           row.getTimeValue(2) + rule->getRuntime()));
+                    row.setCell(4, std::make_shared<Cell<long>>(row.getLongValue(4) + rule->size()));
+                    row.setCell(0, std::make_shared<Cell<std::chrono::microseconds>>(
+                                           row.getTimeValue(0) + rule->getRuntime()));
                     ruleMap[rule->getName()] = std::make_shared<Row>(row);
                 } else {
                     Row row(11);
-                    row[0] = std::make_shared<Cell<std::chrono::microseconds>>(rule->getRuntime());
-                    row[1] = std::make_shared<Cell<std::chrono::microseconds>>(std::chrono::microseconds(0));
-                    row[2] = std::make_shared<Cell<std::chrono::microseconds>>(rule->getRuntime());
-                    row[3] = std::make_shared<Cell<std::chrono::microseconds>>(std::chrono::microseconds(0));
-                    row[4] = std::make_shared<Cell<long>>(rule->size());
-                    row[5] = std::make_shared<Cell<std::string>>(rule->getName());
-                    row[6] = std::make_shared<Cell<std::string>>(rule->getId());
-                    row[7] = std::make_shared<Cell<std::string>>(rel.second->getName());
-                    row[8] = std::make_shared<Cell<long>>(rule->getVersion());
-                    row[10] = std::make_shared<Cell<std::string>>(rule->getLocator());
+                    row.setCell(0, std::make_shared<Cell<std::chrono::microseconds>>(rule->getRuntime()));
+                    row.setCell(1,
+                            std::make_shared<Cell<std::chrono::microseconds>>(std::chrono::microseconds(0)));
+                    row.setCell(2, std::make_shared<Cell<std::chrono::microseconds>>(rule->getRuntime()));
+                    row.setCell(3,
+                            std::make_shared<Cell<std::chrono::microseconds>>(std::chrono::microseconds(0)));
+                    row.setCell(4, std::make_shared<Cell<long>>(rule->size()));
+                    row.setCell(5, std::make_shared<Cell<std::string>>(rule->getName()));
+                    row.setCell(6, std::make_shared<Cell<std::string>>(rule->getId()));
+                    row.setCell(7, std::make_shared<Cell<std::string>>(rel.second->getName()));
+                    row.setCell(8, std::make_shared<Cell<long>>(rule->getVersion()));
+                    row.setCell(10, std::make_shared<Cell<std::string>>(rule->getLocator()));
                     ruleMap[rule->getName()] = std::make_shared<Row>(row);
                 }
             }
@@ -166,14 +168,15 @@ Table inline OutputProcessor::getRulTable() const {
         for (auto& current : ruleMap) {
             std::shared_ptr<Row> row = current.second;
             Row t = *row;
-            std::chrono::microseconds val = t[1]->getTimeVal() + t[2]->getTimeVal() + t[3]->getTimeVal();
+            std::chrono::microseconds val = t.getTimeValue(1) + t.getTimeValue(2) + t.getTimeValue(3);
 
-            t[0] = std::make_shared<Cell<std::chrono::microseconds>>(val);
+            t.setCell(0, std::make_shared<Cell<std::chrono::microseconds>>(val));
 
-            if (t[0]->getTimeVal().count() != 0) {
-                t[9] = std::make_shared<Cell<double>>(t[4]->getLongVal() / (t[0]->getDoubleVal() * 1000));
+            if (t.getTimeValue(0).count() != 0) {
+                t.setCell(
+                        9, std::make_shared<Cell<double>>(t.getLongValue(4) / (t.getDoubleValue(0) * 1000)));
             } else {
-                t[9] = std::make_shared<Cell<double>>(t[4]->getLongVal() / 1.0);
+                t.setCell(9, std::make_shared<Cell<double>>(t.getLongValue(4) / 1.0));
             }
             current.second = std::make_shared<Row>(t);
         }
@@ -212,10 +215,10 @@ Table inline OutputProcessor::getAtomTable(std::string strRel, std::string strRu
             }
             for (auto& atom : rule->getAtoms()) {
                 Row row(4);
-                row[0] = std::make_shared<Cell<std::string>>(atom.rule);
-                row[1] = std::make_shared<Cell<std::string>>(atom.identifier);
-                row[2] = std::make_shared<Cell<long>>(atom.level);
-                row[3] = std::make_shared<Cell<long>>(atom.frequency);
+                row.setCell(0, std::make_shared<Cell<std::string>>(atom.rule));
+                row.setCell(1, std::make_shared<Cell<std::string>>(atom.identifier));
+                row.setCell(2, std::make_shared<Cell<long>>(atom.level));
+                row.setCell(3, std::make_shared<Cell<long>>(atom.frequency));
 
                 table.addRow(std::make_shared<Row>(row));
             }
@@ -247,7 +250,7 @@ Table inline OutputProcessor::getSubrulTable(std::string strRel, std::string str
             }
             for (auto& atom : rule->getAtoms()) {
                 Row row(1);
-                row[0] = std::make_shared<Cell<std::string>>(atom.rule);
+                row.setCell(0, std::make_shared<Cell<std::string>>(atom.rule));
 
                 table.addRow(std::make_shared<Row>(row));
             }
@@ -296,23 +299,25 @@ Table inline OutputProcessor::getVersions(std::string strRel, std::string strRul
 
                 if (ruleMap.find(strTemp) != ruleMap.end()) {
                     Row row = *ruleMap[strTemp];
-                    row[2] = std::make_shared<Cell<std::chrono::microseconds>>(
-                            row[2]->getTimeVal() + rule->getRuntime());
-                    row[4] = std::make_shared<Cell<long>>(row[4]->getLongVal() + rule->size());
-                    row[0] = std::make_shared<Cell<std::chrono::microseconds>>(rule->getRuntime());
+                    row.setCell(2, std::make_shared<Cell<std::chrono::microseconds>>(
+                                           row.getTimeValue(2) + rule->getRuntime()));
+                    row.setCell(4, std::make_shared<Cell<long>>(row.getLongValue(4) + rule->size()));
+                    row.setCell(0, std::make_shared<Cell<std::chrono::microseconds>>(rule->getRuntime()));
                     ruleMap[strTemp] = std::make_shared<Row>(row);
                 } else {
                     Row row(10);
-                    row[1] = std::make_shared<Cell<std::chrono::microseconds>>(std::chrono::microseconds(0));
-                    row[2] = std::make_shared<Cell<std::chrono::microseconds>>(rule->getRuntime());
-                    row[3] = std::make_shared<Cell<std::chrono::microseconds>>(std::chrono::microseconds(0));
-                    row[4] = std::make_shared<Cell<long>>(rule->size());
-                    row[5] = std::make_shared<Cell<std::string>>(rule->getName());
-                    row[6] = std::make_shared<Cell<std::string>>(rule->getId());
-                    row[7] = std::make_shared<Cell<std::string>>(rel->getName());
-                    row[8] = std::make_shared<Cell<long>>(rule->getVersion());
-                    row[9] = std::make_shared<Cell<std::string>>(rule->getLocator());
-                    row[0] = std::make_shared<Cell<std::chrono::microseconds>>(rule->getRuntime());
+                    row.setCell(1,
+                            std::make_shared<Cell<std::chrono::microseconds>>(std::chrono::microseconds(0)));
+                    row.setCell(2, std::make_shared<Cell<std::chrono::microseconds>>(rule->getRuntime()));
+                    row.setCell(3,
+                            std::make_shared<Cell<std::chrono::microseconds>>(std::chrono::microseconds(0)));
+                    row.setCell(4, std::make_shared<Cell<long>>(rule->size()));
+                    row.setCell(5, std::make_shared<Cell<std::string>>(rule->getName()));
+                    row.setCell(6, std::make_shared<Cell<std::string>>(rule->getId()));
+                    row.setCell(7, std::make_shared<Cell<std::string>>(rel->getName()));
+                    row.setCell(8, std::make_shared<Cell<long>>(rule->getVersion()));
+                    row.setCell(9, std::make_shared<Cell<std::string>>(rule->getLocator()));
+                    row.setCell(0, std::make_shared<Cell<std::chrono::microseconds>>(rule->getRuntime()));
                     ruleMap[strTemp] = std::make_shared<Row>(row);
                 }
             }
@@ -321,8 +326,8 @@ Table inline OutputProcessor::getVersions(std::string strRel, std::string strRul
 
     for (auto row : ruleMap) {
         Row t = *row.second;
-        t[0] = std::make_shared<Cell<std::chrono::microseconds>>(
-                t[1]->getTimeVal() + t[2]->getTimeVal() + t[3]->getTimeVal());
+        t.setCell(0, std::make_shared<Cell<std::chrono::microseconds>>(
+                             t.getTimeValue(1) + t.getTimeValue(2) + t.getTimeValue(3)));
         ruleMap[row.first] = std::make_shared<Row>(t);
     }
 
@@ -361,10 +366,10 @@ Table inline OutputProcessor::getVersionAtoms(std::string strRel, std::string sr
             if (rule->getLocator() == srcLocator && rule->getVersion() == version) {
                 for (auto& atom : rule->getAtoms()) {
                     Row row(4);
-                    row[0] = std::make_shared<Cell<std::string>>(atom.rule);
-                    row[1] = std::make_shared<Cell<std::string>>(atom.identifier);
-                    row[2] = std::make_shared<Cell<long>>(atom.level);
-                    row[3] = std::make_shared<Cell<long>>(atom.frequency);
+                    row.setCell(0, std::make_shared<Cell<std::string>>(atom.rule));
+                    row.setCell(1, std::make_shared<Cell<std::string>>(atom.identifier));
+                    row.setCell(2, std::make_shared<Cell<long>>(atom.level));
+                    row.setCell(3, std::make_shared<Cell<long>>(atom.frequency));
                     table.addRow(std::make_shared<Row>(row));
                 }
             }

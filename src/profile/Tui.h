@@ -113,7 +113,6 @@ public:
             updateDB();
             // remake tables to get new data
             ruleTable = out.getRulTable();
-            relationTable = out.getRelTable();
 
             setupTabCompletion();
         }
@@ -253,58 +252,55 @@ public:
 
         ss << '"' << name << R"_(":{)_";
         bool firstRow = true;
-        auto rows = relationTable.getRows();
-        std::stable_sort(rows.begin(), rows.end(), [](std::shared_ptr<Row> left, std::shared_ptr<Row> right) {
-            return left->getDoubleValue(0) > right->getDoubleValue(0);
-        });
-        maxRows = std::min(rows.size(), maxRows);
 
-        for (size_t i = 0; i < maxRows; ++i) {
+        auto relations = run->getRelationsByFrequency();
+        maxRows = std::min(relations.size(), maxRows);
+        for (auto relation : relations) {
+            if (maxRows-- < 0) {
+                break;
+            }
             comma(firstRow, ",\n");
-
-            Row& row = *rows[i];
-            ss << '"' << row.valueToString(6, 0) << R"_(": [)_";
-            ss << '"' << Tools::cleanJsonOut(row.valueToString(5, 0)) << R"_(", )_";
-            ss << '"' << Tools::cleanJsonOut(row.valueToString(6, 0)) << R"_(", )_";
-            ss << row.getDoubleValue(0) << ", ";
-            ss << row.getDoubleValue(1) << ", ";
-            ss << row.getDoubleValue(2) << ", ";
-            ss << row.getDoubleValue(3) << ", ";
-            ss << row.getLongValue(4) << ", ";
-            ss << row.getLongValue(12) << ", ";
-            ss << '"' << Tools::cleanJsonOut(row.valueToString(7, 0)) << R"_(", [)_";
+            ss << '"' << relation->getId() << R"_(": [)_";
+            ss << '"' << Tools::cleanJsonOut(relation->getName()) << R"_(", )_";
+            ss << '"' << Tools::cleanJsonOut(relation->getId()) << R"_(", )_";
+            ss << relation->getRunTime().count() / 1000000 << ", ";
+            ss << relation->getNonRecTime().count() / 1000000 << ", ";
+            ss << relation->getRecTime().count() / 1000000 << ", ";
+            ss << relation->getCopyTime().count() / 1000000 << ", ";
+            ss << relation->size() << ", ";
+            ss << relation->getReads() << ", ";
+            ss << '"' << Tools::cleanJsonOut(relation->getLocator()) << R"_(", [)_";
 
             bool firstCol = true;
-            for (auto& _rel_row : ruleTable.getRows()) {
-                Row rel_row = *_rel_row;
-                if (rel_row.valueToString(7, 0) == row.valueToString(5, 0)) {
-                    comma(firstCol);
-                    ss << '"' << rel_row.valueToString(6, 0) << '"';
-                }
+            for (auto& rule : relation->getRuleMap()) {
+                comma(firstCol);
+                ss << '"' << rule.second->getName() << '"';
             }
             ss << "], ";
-            std::vector<std::shared_ptr<Iteration>> iter =
-                    run->getRelation(row.valueToString(5, 0))->getIterations();
+
             ss << R"_({"tot_t": [)_";
             firstCol = true;
-            for (auto& i : iter) {
+            for (auto& i : relation->getIterations()) {
                 comma(firstCol);
                 ss << i->getRuntime().count();
             }
+
             ss << R"_(], "copy_t": [)_";
             firstCol = true;
-            for (auto& i : iter) {
+            for (auto& i : relation->getIterations()) {
                 comma(firstCol);
                 ss << i->getCopytime().count();
             }
+
             ss << R"_(], "tuples": [)_";
             firstCol = true;
-            for (auto& i : iter) {
+            for (auto& i : relation->getIterations()) {
                 comma(firstCol);
                 ss << i->size();
             }
             ss << "]}]";
         }
+
         ss << "}";
 
         return ss;
@@ -446,7 +442,7 @@ public:
             }
         };
 
-        std::string source_loc = (*relationTable.getRows()[0]).getStringValue(7);
+        std::string source_loc = run->getFileLocation();
         std::string source_file_loc = Tools::split(source_loc, " ").at(0);
         std::ifstream source_file(source_file_loc);
         if (!source_file.is_open()) {
@@ -538,7 +534,7 @@ public:
                     comma(firstCol);
                     std::string relationName = atom.identifier;
                     relationName = relationName.substr(0, relationName.find('('));
-                    auto* relation = run->getRelation(relationName);
+                    auto relation = run->getRelation(relationName);
                     std::string relationSize = relation == nullptr ? "" : std::to_string(relation->size());
                     ss << '[';
                     ss << '"' << Tools::cleanJsonOut(Tools::cleanString(atom.rule)) << R"_(", )_";
@@ -558,7 +554,7 @@ public:
                         comma(firstCol);
                         std::string relationName = atom.identifier;
                         relationName = relationName.substr(0, relationName.find('('));
-                        auto* relation = run->getRelation(relationName);
+                        auto relation = run->getRelation(relationName);
                         std::string relationSize =
                                 relation == nullptr ? "" : std::to_string(relation->size());
                         ss << '[';
@@ -585,7 +581,7 @@ public:
         ss << ",\n";
         genJsonRules(ss, "topRul", 3);
         ss << ",\n";
-        genJsonRelations(ss, "rel", relationTable.rows.size());
+        genJsonRelations(ss, "rel", run->getRelationMap().size());
         ss << ",\n";
         genJsonRules(ss, "rul", ruleTable.rows.size());
         ss << ",\n";
@@ -697,7 +693,7 @@ public:
             return;
         }
 
-        const Relation* rel = run->getRelation(name);
+        const auto rel = run->getRelation(name);
         usage(rel->getEndtime(), rel->getStarttime());
     }
 
@@ -719,7 +715,7 @@ public:
             return;
         }
 
-        auto* rel = run->getRelation(relName);
+        auto rel = run->getRelation(relName);
         if (rel == nullptr) {
             std::cout << "Relation ceased to exist. Odd." << std::endl;
             return;
@@ -1051,22 +1047,19 @@ public:
     }
 
     void rel(size_t limit, bool showLimit = true) {
-        relationTable.sort(sortColumn);
+        // TODO: sort on selected column ... or not?
+
         std::cout << " ----- Relation Table -----\n";
-        std::printf("%8s%8s%8s%8s%8s%8s%8s%8s%8s%6s %s\n\n", "TOT_T", "NREC_T", "REC_T", "COPY_T", "LOAD_T",
-                "SAVE_T", "TUPLES", "READS", "TUP/s", "ID", "NAME");
-        size_t count = 0;
-        for (auto& row : Tools::formatTable(relationTable, precision)) {
-            if (++count > limit) {
+        relSummaryHeaders();
+        auto relations = run->getRelationsByFrequency();
+        for (auto relation : relations) {
+            if (limit-- == 0) {
                 if (showLimit) {
-                    std::cout << (relationTable.getRows().size() - resultLimit) << " rows not shown"
-                              << std::endl;
+                    std::cout << (relations.size() - resultLimit) << " rows not shown" << std::endl;
                 }
                 break;
             }
-            std::printf("%8s%8s%8s%8s%8s%8s%8s%8s%8s%6s %s\n", row[0].c_str(), row[1].c_str(), row[2].c_str(),
-                    row[3].c_str(), row[9].c_str(), row[10].c_str(), row[4].c_str(), row[12].c_str(),
-                    row[8].c_str(), row[6].c_str(), row[5].c_str());
+            relSummary(relation);
         }
     }
 
@@ -1106,37 +1099,60 @@ public:
         }
     }
 
+    void relSummaryHeaders() const {
+        std::printf("%8s%8s%8s%8s%8s%8s%8s%8s%8s%6s %s\n\n", "TOT_T", "NREC_T", "REC_T", "COPY_T", "LOAD_T",
+                "SAVE_T", "TUPLES", "READS", "TUP/s", "ID", "NAME");
+    }
+
+    void relSummary(std::shared_ptr<Relation> relation, bool printHeaders = false) const {
+        std::cout << std::setw(8) << Tools::formatTime(relation->getRunTime());
+        std::cout << std::setw(8) << Tools::formatTime(relation->getNonRecTime());
+        std::cout << std::setw(8) << Tools::formatTime(relation->getRecTime());
+        std::cout << std::setw(8) << Tools::formatTime(relation->getCopyTime());
+        std::cout << std::setw(8) << Tools::formatTime(relation->getLoadtime());
+        std::cout << std::setw(8) << Tools::formatTime(relation->getSavetime());
+        std::cout << std::setw(8) << Tools::formatNum(precision, relation->size());
+        std::cout << std::setw(8) << Tools::formatNum(precision, relation->getReads());
+        std::cout << std::setw(8)
+                  << Tools::formatNum(
+                             precision, relation->size() / (relation->getRunTime().count() / 1000000.0));
+        std::cout << std::setw(6) << relation->getId();
+        std::cout << " " << relation->getName();
+        std::cout << std::endl;
+    }
+
     void relRul(std::string str) {
+        std::shared_ptr<Relation> relation = run->getRelation(str);
+        if (relation == nullptr) {
+            relation = run->getRelationById(str);
+        }
+        if (relation == nullptr) {
+            std::cout << "Unknown relation" << std::endl;
+            return;
+        }
+
+        relSummaryHeaders();
+        relSummary(relation);
+
         ruleTable.sort(sortColumn);
 
         std::vector<std::vector<std::string>> formattedRuleTable = Tools::formatTable(ruleTable, precision);
-        std::vector<std::vector<std::string>> formattedRelationTable =
-                Tools::formatTable(relationTable, precision);
 
-        std::cout << "  ----- Rules of a Relation -----\n";
+        std::cout << "  ----- Rules -----\n";
         std::printf("%8s%8s%8s%8s%8s %s\n\n", "TOT_T", "NREC_T", "REC_T", "TUPLES", "ID", "NAME");
         std::string name = "";
-        for (auto& row : formattedRelationTable) {
-            // Test for relation name or relation id
-            if (row[5] == str || row[6] == str) {
-                std::printf("%8s%8s%8s%8s%8s %s\n", row[0].c_str(), row[1].c_str(), row[2].c_str(),
-                        row[4].c_str(), row[6].c_str(), row[5].c_str());
-                name = row[5];
-                break;
-            }
-        }
         std::cout << " ---------------------------------------------------------\n";
-        for (auto& row : formattedRuleTable) {
-            if (row[7] == name) {
-                std::printf("%8s%8s%8s%8s%8s %s\n", row[0].c_str(), row[1].c_str(), row[2].c_str(),
-                        row[4].c_str(), row[6].c_str(), row[7].c_str());
-            }
+        for (auto& rule : relation->getRuleTotals()) {
+            std::cout << std::setw(8) << Tools::formatTime(rule->getRuntime());
+            std::cout << std::setw(8) << Tools::formatTime(rule->getNonrecursiveRuntime());
+            std::cout << std::setw(8) << Tools::formatTime(rule->getRecursiveRuntime());
+            std::cout << std::setw(8) << Tools::formatNum(rule->size());
+            std::cout << std::setw(8) << rule->getId();
+            std::cout << " " << rule->getName();
+            std::cout << std::endl;
         }
-        std::string src = "";
-        if (run->getRelation(name) != nullptr) {
-            src = run->getRelation(name)->getLocator();
-        }
-        std::cout << "\nSrc locator: " << src << "\n\n";
+
+        std::cout << "\nSrc locator: " << relation->getLocator() << "\n\n";
         for (auto& row : formattedRuleTable) {
             if (row[7] == name) {
                 std::printf("%7s%2s%s\n", row[6].c_str(), "", row[5].c_str());
@@ -1425,7 +1441,7 @@ protected:
             }
             std::string relationName = row.getStringValue(1);
             relationName = relationName.substr(0, relationName.find('('));
-            auto* relation = run->getRelation(relationName);
+            auto relation = run->getRelation(relationName);
             std::string relationSize = relation == nullptr ? "--" : std::to_string(relation->size());
             std::printf("      %-16s%-16s%s\n", row.valueToString(3, precision).c_str(), relationSize.c_str(),
                     row.getStringValue(1).c_str());
@@ -1435,7 +1451,6 @@ protected:
     void updateDB() {
         reader->processFile();
         ruleTable = out.getRulTable();
-        relationTable = out.getRelTable();
     }
 
     uint32_t getTermWidth() {

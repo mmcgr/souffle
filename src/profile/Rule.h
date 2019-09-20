@@ -64,12 +64,22 @@ public:
     Rule(std::string name, int version, std::string id)
             : name(std::move(name)), identifier(std::move(id)), recursive(true), version(version) {}
 
+    Rule(const Rule& rule) = default;
+
     std::string getId() const {
         return identifier;
     }
 
-    std::chrono::microseconds getRuntime() const {
+    virtual std::chrono::microseconds getRuntime() const {
         return endtime - starttime;
+    }
+
+    virtual std::chrono::microseconds getRecursiveRuntime() const {
+        return recursive ? std::chrono::microseconds{0} : getRuntime();
+    }
+
+    virtual std::chrono::microseconds getNonrecursiveRuntime() const {
+        return !recursive ? std::chrono::microseconds{0} : getRuntime();
     }
 
     std::chrono::microseconds getStarttime() const {
@@ -80,7 +90,7 @@ public:
         return endtime;
     }
 
-    long size() {
+    size_t size() const {
         return numTuples;
     }
 
@@ -103,6 +113,7 @@ public:
     const std::set<Atom>& getAtoms() const {
         return atoms;
     }
+
     std::string getName() const {
         return name;
     }
@@ -145,6 +156,42 @@ public:
         output << "[" << getRuntime().count() << "," << numTuples << "]}";
         return output.str();
     }
+};
+
+class SummedRule : public Rule {
+public:
+    SummedRule(std::string name, std::string id) : Rule(name, id) {}
+    SummedRule(const Rule& rule)
+            : Rule(rule),
+              recursiveDuration(rule.isRecursive() ? rule.getRuntime() : std::chrono::microseconds{0}),
+              nonrecursiveDuration(!rule.isRecursive() ? rule.getRuntime() : std::chrono::microseconds{0}) {}
+
+    SummedRule& operator+=(const SummedRule& rule) {
+        if (rule.getName() != name) {
+            return *this;
+        }
+        recursiveDuration += rule.recursiveDuration;
+        nonrecursiveDuration += rule.nonrecursiveDuration;
+        numTuples += rule.numTuples;
+
+        return *this;
+    }
+
+    virtual std::chrono::microseconds getRuntime() const {
+        return recursiveDuration + nonrecursiveDuration;
+    }
+
+    virtual std::chrono::microseconds getRecursiveRuntime() const {
+        return recursiveDuration;
+    }
+
+    virtual std::chrono::microseconds getNonrecursiveRuntime() const {
+        return nonrecursiveDuration;
+    }
+
+private:
+    std::chrono::microseconds recursiveDuration{};
+    std::chrono::microseconds nonrecursiveDuration{};
 };
 
 }  // namespace profile

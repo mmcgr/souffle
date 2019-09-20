@@ -60,6 +60,19 @@ public:
         return relationMap;
     }
 
+    inline const std::vector<std::shared_ptr<Relation>> getRelationsByFrequency() const {
+        std::vector<std::shared_ptr<Relation>> relations;
+        for (const auto& pair : relationMap) {
+            relations.push_back(pair.second);
+        }
+        std::stable_sort(relations.begin(), relations.end(),
+                [](std::shared_ptr<Relation> left, std::shared_ptr<Relation> right) {
+                    return left->getRunTime() > right->getRunTime();
+                });
+
+        return relations;
+    }
+
     std::string getRuntime() const {
         if (startTime == endTime) {
             return "--";
@@ -123,9 +136,18 @@ public:
         return result;
     }
 
-    const Relation* getRelation(const std::string& name) const {
+    const std::shared_ptr<Relation> getRelation(const std::string& name) const {
         if (relationMap.find(name) != relationMap.end()) {
-            return &(*relationMap.at(name));
+            return relationMap.at(name);
+        }
+        return nullptr;
+    }
+
+    const std::shared_ptr<Relation> getRelationById(const std::string& id) const {
+        for (auto& cur : relationMap) {
+            if (cur.second->getId() == id) {
+                return cur.second;
+            }
         }
         return nullptr;
     }
@@ -139,6 +161,10 @@ public:
             }
         }
         return result;
+    }
+
+    std::string getFileLocation() {
+        return relationMap.begin()->second->getLocator();
     }
 };
 

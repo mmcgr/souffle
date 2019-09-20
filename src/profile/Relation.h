@@ -103,6 +103,10 @@ public:
         return result;
     }
 
+    std::chrono::microseconds getRunTime() const {
+        return getNonRecTime() + getRecTime() + getCopyTime();
+    }
+
     size_t size() const {
         size_t result = 0;
         for (auto& iter : iterations) {
@@ -196,13 +200,48 @@ public:
     }
 
     std::vector<std::shared_ptr<Rule>> getRuleRecList() const {
-        std::vector<std::shared_ptr<Rule>> temp = std::vector<std::shared_ptr<Rule>>();
+        std::vector<std::shared_ptr<Rule>> rules;
         for (auto& iter : iterations) {
             for (auto& rul : iter->getRules()) {
-                temp.push_back(rul.second);
+                rules.push_back(rul.second);
             }
         }
-        return temp;
+        return rules;
+    }
+
+    std::vector<std::shared_ptr<Rule>> getRuleNonRecList() const {
+        std::vector<std::shared_ptr<Rule>> rules;
+        for (auto& rulePair : ruleMap) {
+            rules.push_back(rulePair.second);
+        }
+
+        return rules;
+    }
+
+    std::vector<std::shared_ptr<Rule>> getRuleTotals() const {
+        std::unordered_map<std::string, std::shared_ptr<SummedRule>> sums;
+        for (auto& rulePair : ruleMap) {
+            sums[rulePair.first] = std::make_shared<SummedRule>(*rulePair.second);
+        }
+
+        for (auto& iter : iterations) {
+            for (auto& rul : iter->getRules()) {
+                sums.try_emplace(rul.second->getName(),
+                        std::make_shared<SummedRule>(rul.second->getName(), rul.second->getId()));
+                *sums[rul.second->getName()] += *rul.second;
+            }
+        }
+        std::vector<std::shared_ptr<Rule>> rules;
+        for (auto& rulePair : sums) {
+            rules.push_back(rulePair.second);
+        }
+
+        std::stable_sort(
+                rules.begin(), rules.end(), [](std::shared_ptr<Rule> left, std::shared_ptr<Rule> right) {
+                    return left->getRuntime() > right->getRuntime();
+                });
+
+        return rules;
     }
 
     const std::vector<std::shared_ptr<Iteration>>& getIterations() const {

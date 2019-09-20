@@ -35,8 +35,6 @@ private:
 public:
     OutputProcessor(std::shared_ptr<ProgramRun> run) : programRun(run) {}
 
-    Table getRelTable() const;
-
     Table getRulTable() const;
 
     Table getSubrulTable(std::string strRel, std::string strRul) const;
@@ -48,53 +46,6 @@ public:
     Table getVersionAtoms(std::string strRel, std::string strRul, int version) const;
 };
 
-/*
- * rel table :
- * ROW[0] = TOT_T
- * ROW[1] = NREC_T
- * ROW[2] = REC_T
- * ROW[3] = COPY_T
- * ROW[4] = TUPLES
- * ROW[5] = REL NAME
- * ROW[6] = ID
- * ROW[7] = SRC
- * ROW[8] = PERFOR
- * ROW[9] = LOADTIME
- * ROW[10] = SAVETIME
- * ROW[11] = MAXRSSDIFF
- * ROW[12] = READS
- *
- */
-Table inline OutputProcessor::getRelTable() const {
-    const std::unordered_map<std::string, std::shared_ptr<Relation>>& relationMap =
-            programRun->getRelationMap();
-    Table table;
-    for (auto& rel : relationMap) {
-        std::shared_ptr<Relation> r = rel.second;
-        Row row(13);
-        auto total_time = r->getNonRecTime() + r->getRecTime() + r->getCopyTime();
-        row.setCell(0, std::make_shared<Cell<std::chrono::microseconds>>(total_time));
-        row.setCell(1, std::make_shared<Cell<std::chrono::microseconds>>(r->getNonRecTime()));
-        row.setCell(2, std::make_shared<Cell<std::chrono::microseconds>>(r->getRecTime()));
-        row.setCell(3, std::make_shared<Cell<std::chrono::microseconds>>(r->getCopyTime()));
-        row.setCell(4, std::make_shared<Cell<long>>(r->size()));
-        row.setCell(5, std::make_shared<Cell<std::string>>(r->getName()));
-        row.setCell(6, std::make_shared<Cell<std::string>>(r->getId()));
-        row.setCell(7, std::make_shared<Cell<std::string>>(r->getLocator()));
-        if (total_time.count() != 0) {
-            row.setCell(8, std::make_shared<Cell<long>>(r->size() / (total_time.count() / 1000000.0)));
-        } else {
-            row.setCell(8, std::make_shared<Cell<long>>(r->size()));
-        }
-        row.setCell(9, std::make_shared<Cell<std::chrono::microseconds>>(r->getLoadtime()));
-        row.setCell(10, std::make_shared<Cell<std::chrono::microseconds>>(r->getSavetime()));
-        row.setCell(11, std::make_shared<Cell<long>>(r->getMaxRSSDiff()));
-        row.setCell(12, std::make_shared<Cell<long>>(r->getReads()));
-
-        table.addRow(std::make_shared<Row>(row));
-    }
-    return table;
-}
 /*
  * rul table :
  * ROW[0] = TOT_T

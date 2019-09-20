@@ -113,8 +113,8 @@ public:
     void visit(DirectoryEntry& ruleEntry) override {
         for (const auto& key : ruleEntry.getKeys()) {
             auto& versions = *ruleEntry.readDirectoryEntry(key);
-            auto rule = std::make_shared<Rule>(
-                    ruleEntry.getKey(), std::stoi(key), relation.createRecID(ruleEntry.getKey()));
+            auto name = Tools::cleanString(ruleEntry.getKey());
+            auto rule = std::make_shared<Rule>(name, std::stoi(key), relation.createRecID(name));
             RecursiveRuleVisitor visitor(*rule);
             for (const auto& versionKey : versions.getKeys()) {
                 versions.readEntry(versionKey)->accept(visitor);

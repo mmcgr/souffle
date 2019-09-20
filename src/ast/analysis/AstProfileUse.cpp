@@ -54,7 +54,7 @@ bool AstProfileUse::hasRelationSize(const AstQualifiedName& rel) {
  * Get relation size from profile
  */
 size_t AstProfileUse::getRelationSize(const AstQualifiedName& rel) {
-    if (const auto* profRel = programRun->getRelation(rel.toString())) {
+    if (const auto profRel = programRun->getRelation(rel.toString())) {
         return profRel->size();
     } else {
         return std::numeric_limits<size_t>::max();

@@ -119,8 +119,8 @@ TEST(StringUtil, trimWhitespace) {
 }
 
 TEST(StringUtil, cleanString) {
-    EXPECT_EQ("   a b c", Tools::cleanString("\t\n\ta\nb\\nc"));
-    EXPECT_EQ("   a b c", Tools::cleanString("\"\t\n\ta\nb\\nc\""));
+    EXPECT_EQ(" a b c", Tools::cleanString("\t\n\ta\nb\\nc"));
+    EXPECT_EQ(" a b c", Tools::cleanString("\"\t\n\ta\nb\\nc\""));
 }
 
 TEST(StringUtil, cleanJsonOutString) {

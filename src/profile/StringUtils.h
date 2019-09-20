@@ -210,9 +210,13 @@ inline bool file_exists(const std::string& name) {
     return false;
 }
 /** @brief Remove \n and \t characters, \n and \t sequence of two chars, and wrapping quotes */
-inline std::string cleanString(std::string val) {
+inline std::string cleanString(std::string val, std::string replacement = " ") {
     if (val.size() < 2) {
         return val;
+    }
+
+    if (val.at(0) == '"' && val.at(val.size() - 1) == '"') {
+        val = val.substr(1, val.size() - 2);
     }
 
     size_t start_pos = 0;
@@ -220,17 +224,39 @@ inline std::string cleanString(std::string val) {
         val.erase(start_pos, 1);
         if (start_pos < val.size()) {
             if (val[start_pos] == 'n' || val[start_pos] == 't') {
-                val.replace(start_pos, 1, " ");
+                val.replace(start_pos, 1, "\t");
             }
         }
     }
 
-    if (val.at(0) == '"' && val.at(val.size() - 1) == '"') {
-        val = val.substr(1, val.size() - 2);
-    }
+    std::replace(val.begin(), val.end(), '\n', '\t');
 
-    std::replace(val.begin(), val.end(), '\n', ' ');
-    std::replace(val.begin(), val.end(), '\t', ' ');
+    // Replace whitespace strings formerly containing \n or \t with a single space
+    start_pos = 0;
+    while ((start_pos = val.find('\t', start_pos)) != std::string::npos) {
+        auto firstWhitespace = start_pos;
+        auto lastWhitespace = start_pos;
+
+        while (firstWhitespace >= 0) {
+            if (val[firstWhitespace] != '\t' && val[firstWhitespace] != ' ') {
+                ++firstWhitespace;
+                break;
+            }
+            if (firstWhitespace == 0) {
+                break;
+            }
+            --firstWhitespace;
+        }
+        while (lastWhitespace < val.size()) {
+            if (val[lastWhitespace] != '\t' && val[lastWhitespace] != ' ') {
+                --lastWhitespace;
+                break;
+            }
+            ++lastWhitespace;
+        }
+
+        val.replace(firstWhitespace, 1 + lastWhitespace - firstWhitespace, replacement);
+    }
 
     return val;
 }

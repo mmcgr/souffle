@@ -33,13 +33,7 @@ private:
     std::shared_ptr<ProgramRun> programRun;
 
 public:
-    OutputProcessor() {
-        programRun = std::make_shared<ProgramRun>(ProgramRun());
-    }
-
-    const std::shared_ptr<ProgramRun>& getProgramRun() const {
-        return programRun;
-    }
+    OutputProcessor(std::shared_ptr<ProgramRun> run) : programRun(run) {}
 
     Table getRelTable() const;
 

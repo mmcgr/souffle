@@ -75,18 +75,18 @@ public:
         std::string filename = args['f'];
 
         if (args.count('c') != 0) {
-            Tui tui(filename, false, false);
+            Tui tui(filename, false);
             for (auto& command : Tools::split(args['c'], ";")) {
                 tui.runCommand(Tools::split(command, " "));
             }
         } else if (args.count('j') != 0) {
             if (args['j'] == "j") {
-                Tui(filename, false, true).outputHtml();
+                Tui(filename, false).outputHtml();
             } else {
-                Tui(filename, false, true).outputHtml(args['j']);
+                Tui(filename, false).outputHtml(args['j']);
             }
         } else {
-            Tui(filename, true, false).runProf();
+            Tui(filename, true).runProf();
         }
     }
 };

@@ -38,16 +38,17 @@ namespace profile {
  */
 class Tui {
 private:
+    std::string f_name;
+    std::shared_ptr<ProgramRun> run;
+    std::shared_ptr<Reader> reader;
     OutputProcessor out;
     bool loaded;
-    std::string f_name;
     bool alive = false;
     std::thread updater;
     int sortColumn = 0;
     int precision = 3;
     Table relationTable;
     Table ruleTable;
-    std::shared_ptr<Reader> reader;
     InputReader linereader;
     /// Limit results shown. Default value chosen to approximate unlimited
     size_t resultLimit = 20000;
@@ -63,27 +64,21 @@ private:
     };
 
 public:
-    Tui(std::string filename, bool live, bool /* gui */) {
+    Tui(std::string filename, bool live)
+            : f_name(filename), run(std::make_shared<ProgramRun>(ProgramRun())),
+              reader(std::make_shared<Reader>(filename, run)), out(run), alive(false) {
         // Set a friendlier output size if we're being interacted with directly.
         if (live) {
             resultLimit = 20;
         }
-        this->f_name = filename;
 
-        const std::shared_ptr<ProgramRun>& run = out.getProgramRun();
-
-        this->reader = std::make_shared<Reader>(filename, run);
-
-        this->alive = false;
         updateDB();
-        this->loaded = reader->isLoaded();
+        loaded = reader->isLoaded();
     }
 
-    Tui() {
-        const std::shared_ptr<ProgramRun>& run = out.getProgramRun();
-        this->reader = std::make_shared<Reader>(run);
-        this->loaded = true;
-        this->alive = true;
+    Tui()
+            : run(std::make_shared<ProgramRun>(ProgramRun())), reader(std::make_shared<Reader>(run)),
+              out(run), loaded(true), alive(true) {
         updateDB();
         updater = std::thread([this]() {
             // Update the display every 30s. Check for input every 0.5s
@@ -239,8 +234,6 @@ public:
     }
 
     std::stringstream& genJsonTop(std::stringstream& ss) {
-        const std::shared_ptr<ProgramRun>& run = out.getProgramRun();
-
         auto beginTime = run->getStarttime();
         auto endTime = run->getEndtime();
         ss << R"_({"top":[)_" << (endTime - beginTime).count() / 1000000.0 << "," << run->getTotalSize()
@@ -250,8 +243,6 @@ public:
     }
 
     std::stringstream& genJsonRelations(std::stringstream& ss, const std::string& name, size_t maxRows) {
-        const std::shared_ptr<ProgramRun>& run = out.getProgramRun();
-
         auto comma = [&ss](bool& first, const std::string& delimiter = ", ") {
             if (!first) {
                 ss << delimiter;
@@ -320,8 +311,6 @@ public:
     }
 
     std::stringstream& genJsonRules(std::stringstream& ss, const std::string& name, size_t maxRows) {
-        const std::shared_ptr<ProgramRun>& run = out.getProgramRun();
-
         auto comma = [&ss](bool& first, const std::string& delimiter = ", ") {
             if (!first) {
                 ss << delimiter;
@@ -449,8 +438,6 @@ public:
     }
 
     std::stringstream& genJsonUsage(std::stringstream& ss) {
-        const std::shared_ptr<ProgramRun>& run = out.getProgramRun();
-
         auto comma = [&ss](bool& first, const std::string& delimiter = ", ") {
             if (!first) {
                 ss << delimiter;
@@ -496,7 +483,7 @@ public:
             ss << usage.maxRSS * 1024 << ", ";
             ss << '"';
             bool firstCol = true;
-            for (auto& cur : out.getProgramRun()->getRelationsAtTime(previousUsage.time, usage.time)) {
+            for (auto& cur : run->getRelationsAtTime(previousUsage.time, usage.time)) {
                 comma(firstCol);
                 ss << cur->getName();
             }
@@ -530,8 +517,6 @@ public:
     }
 
     std::stringstream& genJsonAtoms(std::stringstream& ss) {
-        const std::shared_ptr<ProgramRun>& run = out.getProgramRun();
-
         auto comma = [&ss](bool& first, const std::string& delimiter = ", ") {
             if (!first) {
                 ss << delimiter;
@@ -553,7 +538,7 @@ public:
                     comma(firstCol);
                     std::string relationName = atom.identifier;
                     relationName = relationName.substr(0, relationName.find('('));
-                    auto* relation = out.getProgramRun()->getRelation(relationName);
+                    auto* relation = run->getRelation(relationName);
                     std::string relationSize = relation == nullptr ? "" : std::to_string(relation->size());
                     ss << '[';
                     ss << '"' << Tools::cleanJsonOut(Tools::cleanString(atom.rule)) << R"_(", )_";
@@ -573,7 +558,7 @@ public:
                         comma(firstCol);
                         std::string relationName = atom.identifier;
                         relationName = relationName.substr(0, relationName.find('('));
-                        auto* relation = out.getProgramRun()->getRelation(relationName);
+                        auto* relation = run->getRelation(relationName);
                         std::string relationSize =
                                 relation == nullptr ? "" : std::to_string(relation->size());
                         ss << '[';
@@ -712,7 +697,7 @@ public:
             return;
         }
 
-        const Relation* rel = out.getProgramRun()->getRelation(name);
+        const Relation* rel = run->getRelation(name);
         usage(rel->getEndtime(), rel->getStarttime());
     }
 
@@ -734,7 +719,7 @@ public:
             return;
         }
 
-        auto* rel = out.getProgramRun()->getRelation(relName);
+        auto* rel = run->getRelation(relName);
         if (rel == nullptr) {
             std::cout << "Relation ceased to exist. Odd." << std::endl;
             return;
@@ -1004,7 +989,6 @@ public:
     }
 
     void top() {
-        const std::shared_ptr<ProgramRun>& run = out.getProgramRun();
         auto* totalRelationsEntry =
                 dynamic_cast<TextEntry*>(ProfileEventSingleton::instance().getDB().lookupEntry(
                         {"program", "configuration", "relationCount"}));
@@ -1149,7 +1133,6 @@ public:
             }
         }
         std::string src = "";
-        const std::shared_ptr<ProgramRun>& run = out.getProgramRun();
         if (run->getRelation(name) != nullptr) {
             src = run->getRelation(name)->getLocator();
         }
@@ -1231,7 +1214,6 @@ public:
     }
 
     void iterRel(std::string c, std::string col) {
-        const std::shared_ptr<ProgramRun>& run = out.getProgramRun();
         std::vector<std::vector<std::string>> table = Tools::formatTable(relationTable, -1);
         std::vector<std::shared_ptr<Iteration>> iter;
         for (auto& row : table) {
@@ -1266,7 +1248,6 @@ public:
         for (auto& row : table) {
             if (row[5] == c) {
                 std::printf("%4s%2s%s\n\n", row[6].c_str(), "", row[5].c_str());
-                const std::shared_ptr<ProgramRun>& run = out.getProgramRun();
                 iter = run->getRelation(row[5])->getIterations();
                 if (col == "tot_t") {
                     std::vector<std::chrono::microseconds> list;
@@ -1301,7 +1282,6 @@ public:
         for (auto& row : table) {
             if (row[6] == c) {
                 std::printf("%6s%2s%s\n\n", row[6].c_str(), "", row[5].c_str());
-                const std::shared_ptr<ProgramRun>& run = out.getProgramRun();
                 iter = run->getRelation(row[7])->getIterations();
                 if (col == "tot_t") {
                     std::vector<std::chrono::microseconds> list;
@@ -1445,7 +1425,7 @@ protected:
             }
             std::string relationName = row.getStringValue(1);
             relationName = relationName.substr(0, relationName.find('('));
-            auto* relation = out.getProgramRun()->getRelation(relationName);
+            auto* relation = run->getRelation(relationName);
             std::string relationSize = relation == nullptr ? "--" : std::to_string(relation->size());
             std::printf("      %-16s%-16s%s\n", row.valueToString(3, precision).c_str(), relationSize.c_str(),
                     row.getStringValue(1).c_str());

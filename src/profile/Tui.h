@@ -677,23 +677,13 @@ public:
     }
 
     void usageRelation(std::string id) {
-        std::vector<std::vector<std::string>> formattedRelationTable =
-                Tools::formatTable(relationTable, precision);
-        std::string name = "";
-        bool found = false;
-        for (auto& row : formattedRelationTable) {
-            if (row[5] == id || row[6] == id) {
-                name = row[5];
-                found = true;
-                break;
-            }
-        }
-        if (!found) {
-            std::cout << "Relation does not exist.\n";
+        const auto rel = run->getRelationById(id);
+
+        if (rel == nullptr) {
+            std::cout << "*Relation does not exist.\n";
             return;
         }
 
-        const auto rel = run->getRelation(name);
         usage(rel->getEndtime(), rel->getStarttime());
     }
 

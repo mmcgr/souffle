@@ -592,7 +592,7 @@ public:
         return ss.str();
     }
 
-    void outputHtml(std::string filename = "profiler_html/") {
+    void outputHtml(std::string filename) {
         std::cout << "SouffleProf\n";
         std::cout << "Generating HTML files...\n";
 

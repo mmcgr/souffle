@@ -80,11 +80,12 @@ public:
                 tui.runCommand(Tools::split(command, " "));
             }
         } else if (args.count('j') != 0) {
+            std::string outputPath = args['j'];
             if (args['j'] == "j") {
-                Tui(filename, false).outputHtml();
-            } else {
-                Tui(filename, false).outputHtml(args['j']);
+                outputPath = "profiler_html/";
             }
+            Tui(filename, false).outputHtml(outputPath);
+
         } else {
             Tui(filename, true).runProf();
         }

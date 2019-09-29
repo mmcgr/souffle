@@ -1011,7 +1011,7 @@ public:
 
         std::cout << "Slowest relations to fully evaluate\n";
         rel(3, false);
-        for (size_t i = relationTable.getRows().size(); i < 3; ++i) {
+        for (size_t i = run->getRelationsByFrequency().size(); i < 3; ++i) {
             std::cout << "\n";
         }
         std::cout << "Slowest rules to fully evaluate\n";
@@ -1102,6 +1102,7 @@ public:
         std::cout << std::endl;
     }
 
+    /** Print out the rules of a Relation */
     void relRul(std::string str) {
         std::shared_ptr<Relation> relation = run->getRelation(str);
         if (relation == nullptr) {
@@ -1112,16 +1113,19 @@ public:
             return;
         }
 
-        relSummaryHeaders();
-        relSummary(relation);
+        std::cout << "  ----- Rules of a Relation -----\n";
+        std::printf("%8s%8s%8s%8s%8s\n\n", "TOT_T", "NREC_T", "REC_T", "TUPLES", "ID");
 
-        ruleTable.sort(sortColumn);
+        // Relation summary
+        std::cout << std::setw(8) << Tools::formatTime(relation->getRunTime());
+        std::cout << std::setw(8) << Tools::formatTime(relation->getNonRecTime());
+        std::cout << std::setw(8) << Tools::formatTime(relation->getRecTime());
+        std::cout << std::setw(8) << Tools::formatNum(precision, relation->size());
+        std::cout << std::setw(6) << relation->getId();
+        std::cout << " " << relation->getName();
+        std::cout << std::endl;
 
-        std::vector<std::vector<std::string>> formattedRuleTable = Tools::formatTable(ruleTable, precision);
-
-        std::cout << "  ----- Rules -----\n";
-        std::printf("%8s%8s%8s%8s%8s %s\n\n", "TOT_T", "NREC_T", "REC_T", "TUPLES", "ID", "NAME");
-        std::string name = "";
+        // Rule summary
         std::cout << " ---------------------------------------------------------\n";
         for (auto& rule : relation->getRuleTotals()) {
             std::cout << std::setw(8) << Tools::formatTime(rule->getRuntime());
@@ -1129,15 +1133,16 @@ public:
             std::cout << std::setw(8) << Tools::formatTime(rule->getRecursiveRuntime());
             std::cout << std::setw(8) << Tools::formatNum(rule->size());
             std::cout << std::setw(8) << rule->getId();
-            std::cout << " " << rule->getName();
             std::cout << std::endl;
         }
 
         std::cout << "\nSrc locator: " << relation->getLocator() << "\n\n";
-        for (auto& row : formattedRuleTable) {
-            if (row[7] == name) {
-                std::printf("%7s%2s%s\n", row[6].c_str(), "", row[5].c_str());
-            }
+
+        // Map rule ID to rule
+        for (auto& rule : relation->getRuleTotals()) {
+            std::cout << std::setw(8) << rule->getId();
+            std::cout << "  " << Tools::cleanString(rule->getName());
+            std::cout << std::endl;
         }
     }
 

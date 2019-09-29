@@ -41,7 +41,7 @@ private:
     std::shared_ptr<ProgramRun> run;
     std::shared_ptr<Reader> reader;
     OutputProcessor out;
-    bool alive = false;
+    bool live = false;
     bool interactive = false;
     std::thread updater;
     int sortColumn = 0;
@@ -76,19 +76,25 @@ public:
 
     Tui()
             : run(std::make_shared<ProgramRun>(ProgramRun())), reader(std::make_shared<Reader>(run)),
-              out(run), alive(true) {
+              out(run), live(true) {
         updateDB();
+        top();
         updater = std::thread([this]() {
             // Update the display every 30s. Check for input every 0.5s
             std::chrono::milliseconds interval(30000);
             auto nextUpdateTime = std::chrono::high_resolution_clock::now();
             do {
-                std::this_thread::sleep_for(std::chrono::milliseconds(500));
                 if (nextUpdateTime < std::chrono::high_resolution_clock::now()) {
-                    runCommand({});
+                    // Move up n lines and overwrite the previous top output.
+                    std::cout << "\x1b[3D";
+                    std::cout << "\x1b[31A";
+                    updateDB();
+                    top();
+                    std::cout << "\x1b[B> ";
                     nextUpdateTime = std::chrono::high_resolution_clock::now() + interval;
                 }
-            } while (reader->isLive() && !linereader.hasReceivedInput());
+                std::this_thread::sleep_for(std::chrono::milliseconds(500));
+            } while (/*reader->isLive() && */ !linereader.hasReceivedInput());
         });
     }
 
@@ -101,12 +107,14 @@ public:
     void runCommand(std::vector<std::string> c) {
         if (linereader.hasReceivedInput()) {
             interactive = true;
-	    // Input was received, but no command entered so nothing to do
+            // Input was received, but no command entered so nothing to do
             if (c.empty()) {
                 return;
             }
+        } else {
+            interactive = false;
         }
-        if (alive) {
+        if (reader->isLive()) {
             updateDB();
             // remake tables to get new data
             ruleTable = out.getRulTable();
@@ -114,14 +122,7 @@ public:
             setupTabCompletion();
         }
 
-        // If we have not received any input yet in live mode then run top.
-        if ((!linereader.hasReceivedInput() && c.empty())) {
-            // Move up n lines and overwrite the previous top output.
-            std::cout << "\x1b[3D";
-            std::cout << "\x1b[27A";
-            top();
-            std::cout << "\x1b[B> ";
-        } else if (c[0] == "top") {
+        if (c[0] == "top") {
             top();
         } else if (c[0] == "rel") {
             if (c.size() == 2) {
@@ -661,8 +662,6 @@ public:
         std::printf("  %-30s%-5s %s\n", "help", "-", "print this.");
 
         std::cout << "\nInteractive mode only commands:" << std::endl;
-        //    if (alive) std::printf("  %-30s%-5s %s\n", "stop", "-",
-        //                "stop the current live run.");
         std::printf("  %-30s%-5s %s\n", "limit <row count>", "-", "limit number of results shown.");
         std::printf("  %-30s%-5s %s\n", "sort <col number>", "-", "sort tables by given column number.");
         std::printf("  %-30s%-5s %s\n", "q", "-", "exit program.");
@@ -998,7 +997,7 @@ public:
         // Determine number of relations processed
         size_t processedRelations = run->getRelationMap().size();
         size_t screenWidth = getTermWidth() - 10;
-        if (alive && totalRelationsEntry != nullptr) {
+        if (live && totalRelationsEntry != nullptr) {
             std::cout << "Progress ";
             for (size_t i = 0; i < screenWidth; ++i) {
                 if (screenWidth * processedRelations / totalRelations > i) {

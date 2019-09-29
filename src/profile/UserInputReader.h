@@ -23,7 +23,7 @@ namespace profile {
  */
 class InputReader {
 private:
-    std::string prompt = "Input: ";
+    std::string prompt = "\n> ";
     std::vector<std::string> tab_completion;
     std::vector<std::string> history;
     std::string output;
@@ -86,7 +86,7 @@ public:
         in_tab_complete = false;
         in_history = false;
 
-        std::cout << this->prompt << std::flush;
+        std::cout << prompt << std::flush;
         readchar();
         inputReceived = true;
 

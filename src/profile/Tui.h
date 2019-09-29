@@ -193,7 +193,6 @@ public:
             top();
         }
 
-        linereader.setPrompt("\n> ");
         setupTabCompletion();
 
         while (true) {

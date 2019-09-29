@@ -38,7 +38,6 @@ namespace profile {
  */
 class Tui {
 private:
-    std::string f_name;
     std::shared_ptr<ProgramRun> run;
     std::shared_ptr<Reader> reader;
     OutputProcessor out;
@@ -65,7 +64,7 @@ private:
 
 public:
     Tui(std::string filename, bool live)
-            : f_name(filename), run(std::make_shared<ProgramRun>(ProgramRun())),
+            : run(std::make_shared<ProgramRun>(ProgramRun())),
               reader(std::make_shared<Reader>(filename, run)), out(run), alive(false) {
         // Set a friendlier output size if we're being interacted with directly.
         if (live) {
@@ -191,10 +190,6 @@ public:
     }
 
     void runProf() {
-        if (!loaded && !f_name.empty()) {
-            std::cout << "Error: File cannot be floaded\n";
-            return;
-        }
         if (loaded) {
             std::cout << "SouffleProf\n";
             top();

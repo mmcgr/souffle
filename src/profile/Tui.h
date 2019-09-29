@@ -41,8 +41,8 @@ private:
     std::shared_ptr<ProgramRun> run;
     std::shared_ptr<Reader> reader;
     OutputProcessor out;
-    bool loaded;
     bool alive = false;
+    bool interactive = false;
     std::thread updater;
     int sortColumn = 0;
     int precision = 3;
@@ -63,21 +63,20 @@ private:
     };
 
 public:
-    Tui(std::string filename, bool live)
+    Tui(std::string filename, bool interactive)
             : run(std::make_shared<ProgramRun>(ProgramRun())),
-              reader(std::make_shared<Reader>(filename, run)), out(run), alive(false) {
+              reader(std::make_shared<Reader>(filename, run)), out(run), interactive(interactive) {
         // Set a friendlier output size if we're being interacted with directly.
-        if (live) {
+        if (interactive) {
             resultLimit = 20;
         }
 
         updateDB();
-        loaded = reader->isLoaded();
     }
 
     Tui()
             : run(std::make_shared<ProgramRun>(ProgramRun())), reader(std::make_shared<Reader>(run)),
-              out(run), loaded(true), alive(true) {
+              out(run), alive(true) {
         updateDB();
         updater = std::thread([this]() {
             // Update the display every 30s. Check for input every 0.5s
@@ -100,14 +99,13 @@ public:
     }
 
     void runCommand(std::vector<std::string> c) {
-        if (linereader.hasReceivedInput() && c.empty()) {
-            return;
+        if (linereader.hasReceivedInput()) {
+            interactive = true;
+	    // Input was received, but no command entered so nothing to do
+            if (c.empty()) {
+                return;
+            }
         }
-        if (!loaded) {
-            std::cout << "Error: File cannot be loaded\n";
-            return;
-        }
-
         if (alive) {
             updateDB();
             // remake tables to get new data
@@ -190,7 +188,7 @@ public:
     }
 
     void runProf() {
-        if (loaded) {
+        if (interactive) {
             std::cout << "SouffleProf\n";
             top();
         }

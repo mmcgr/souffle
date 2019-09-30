@@ -135,10 +135,9 @@ public:
         } else if (c[0] == "rul") {
             if (c.size() > 1) {
                 if (c.size() == 3 && c[1] == "id") {
-                    std::printf("%7s%2s%s\n\n", "ID", "", "NAME");
                     id(c[2]);
                 } else if (c.size() == 2 && c[1] == "id") {
-                    id("0");
+                    ruleIds();
                 } else if (c.size() == 2) {
                     verRul(c[1]);
                 } else {
@@ -965,6 +964,7 @@ public:
         std::cout << std::endl;
     }
 
+    /** Show summary statistics and progress */
     void top() {
         auto* totalRelationsEntry =
                 dynamic_cast<TextEntry*>(ProfileEventSingleton::instance().getDB().lookupEntry(
@@ -1027,9 +1027,14 @@ public:
         resultLimit = limit;
     }
 
+    /**
+     * @brief Print the top limit relations by frequency
+     *
+     * @param limit how many relations to print
+     * @param showlimit set true to show how many relations were not printed
+     *
+     */
     void rel(size_t limit, bool showLimit = true) {
-        // TODO: sort on selected column ... or not?
-
         std::cout << " ----- Relation Table -----\n";
         relSummaryHeaders();
         auto relations = run->getRelationsByFrequency();
@@ -1045,6 +1050,8 @@ public:
     }
 
     void rul(size_t limit, bool showLimit = true) {
+        auto relations = run->getRelationsByFrequency();
+
         ruleTable.sort(sortColumn);
         std::cout << "  ----- Rule Table -----\n";
         std::printf(
@@ -1062,20 +1069,35 @@ public:
         }
     }
 
-    void id(std::string col) {
-        ruleTable.sort(6);
-        std::vector<std::vector<std::string>> table = Tools::formatTable(ruleTable, precision);
-
-        if (col == "0") {
-            std::printf("%7s%2s%s\n\n", "ID", "", "NAME");
-            for (auto& row : table) {
-                std::printf("%7s%2s%s\n", row[6].c_str(), "", row[5].c_str());
+    /** Print out all rule id to name mappings */
+    void ruleIds() {
+        std::map<std::string, std::string> ruleIdMap;
+        for (auto& relationPair : run->getRelationMap()) {
+            for (auto& rule : relationPair.second->getRuleTotals()) {
+                ruleIdMap[rule->getId()] = Tools::cleanString(rule->getName());
             }
-        } else {
-            for (auto& row : table) {
-                if (row[6] == col) {
-                    std::printf("%7s%2s%s\n", row[6].c_str(), "", row[5].c_str());
-                }
+        }
+
+        std::printf("%7s%2s%s\n\n", "1ID", "", "NAME");
+        for (auto rulePair : ruleIdMap) {
+            std::cout << std::setw(7) << rulePair.first << "  " << rulePair.second << std::endl;
+        }
+    }
+
+    /** Print out all rule id to name mappings */
+    void id(std::string id) {
+        std::map<std::string, std::string> ruleIdMap;
+        for (auto& relationPair : run->getRelationMap()) {
+            for (auto& rule : relationPair.second->getRuleTotals()) {
+                ruleIdMap[rule->getId()] = Tools::cleanString(rule->getName());
+            }
+        }
+
+        std::printf("%7s%2s%s\n\n", "ID", "", "NAME");
+        for (auto rulePair : ruleIdMap) {
+            if (rulePair.first == id) {
+                std::cout << std::setw(7) << rulePair.first << "  " << rulePair.second << std::endl;
+                break;
             }
         }
     }

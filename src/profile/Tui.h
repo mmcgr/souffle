@@ -1130,6 +1130,30 @@ public:
         }
     }
 
+    /** Find a rule using the given id, whether norecursive or recursive. */
+    std::shared_ptr<Rule> getRuleById(std::string ruleId) {
+        auto relation = run->getRelationById(getRelationId(ruleId));
+        if (relation == nullptr) {
+            std::cout << "Relation for id not found" << std::endl;
+            return nullptr;
+        }
+
+        for (auto rulePair : relation->getRuleMap()) {
+            if (rulePair.second->getId() == ruleId) {
+                return rulePair.second;
+            }
+        }
+        for (auto& iteration : relation->getIterations()) {
+            for (auto& rulePair : iteration->getRules()) {
+                if (rulePair.second->getId() == ruleId) {
+                    return rulePair.second;
+                }
+            }
+        }
+
+        return nullptr;
+    }
+
     void relSummaryHeaders() const {
         std::printf("%8s%8s%8s%8s%8s%8s%8s%8s%8s%6s %s\n\n", "TOT_T", "NREC_T", "REC_T", "COPY_T", "LOAD_T",
                 "SAVE_T", "TUPLES", "READS", "TUP/s", "ID", "NAME");
@@ -1265,113 +1289,89 @@ public:
         verAtoms(atom_table, ruleName);
     }
 
-    void iterRel(std::string c, std::string col) {
-        std::vector<std::vector<std::string>> table = Tools::formatTable(relationTable, -1);
-        std::vector<std::shared_ptr<Iteration>> iter;
-        for (auto& row : table) {
-            if (row[6] == c) {
-                std::printf("%4s%2s%s\n\n", row[6].c_str(), "", row[5].c_str());
-                iter = run->getRelation(row[5])->getIterations();
-                if (col == "tot_t") {
-                    std::vector<std::chrono::microseconds> list;
-                    for (auto& i : iter) {
-                        list.emplace_back(i->getRuntime());
-                    }
-                    std::printf("%4s   %s\n\n", "NO", "RUNTIME");
-                    graphByTime(list);
-                } else if (col == "copy_t") {
-                    std::vector<std::chrono::microseconds> list;
-                    for (auto& i : iter) {
-                        list.emplace_back(i->getCopytime());
-                    }
-                    std::printf("%4s   %s\n\n", "NO", "COPYTIME");
-                    graphByTime(list);
-                } else if (col == "tuples") {
-                    std::vector<size_t> list;
-                    for (auto& i : iter) {
-                        list.emplace_back(i->size());
-                    }
-                    std::printf("%4s   %s\n\n", "NO", "TUPLES");
-                    graphBySize(list);
-                }
-                return;
-            }
+    /** Print graph of total time, copy time, or tuples generated per iteration of a relation */
+    void iterRel(std::string relationId, std::string col) {
+        auto relation = run->getRelationById(relationId);
+        if (relation == nullptr) {
+            return;
         }
-        for (auto& row : table) {
-            if (row[5] == c) {
-                std::printf("%4s%2s%s\n\n", row[6].c_str(), "", row[5].c_str());
-                iter = run->getRelation(row[5])->getIterations();
-                if (col == "tot_t") {
-                    std::vector<std::chrono::microseconds> list;
-                    for (auto& i : iter) {
-                        list.emplace_back(i->getRuntime());
-                    }
-                    std::printf("%4s   %s\n\n", "NO", "RUNTIME");
-                    graphByTime(list);
-                } else if (col == "copy_t") {
-                    std::vector<std::chrono::microseconds> list;
-                    for (auto& i : iter) {
-                        list.emplace_back(i->getCopytime());
-                    }
-                    std::printf("%4s   %s\n\n", "NO", "COPYTIME");
-                    graphByTime(list);
-                } else if (col == "tuples") {
-                    std::vector<size_t> list;
-                    for (auto& i : iter) {
-                        list.emplace_back(i->size());
-                    }
-                    std::printf("%4s   %s\n\n", "NO", "TUPLES");
-                    graphBySize(list);
-                }
-                return;
+
+        std::cout << std::setw(4) << relation->getId() << "  " << relation->getName() << "\n\n";
+
+        auto iter = relation->getIterations();
+        if (col == "tot_t") {
+            std::vector<std::chrono::microseconds> list;
+            for (auto& i : iter) {
+                list.emplace_back(i->getRuntime());
             }
+            std::cout << "No     Runtime\n\n";
+            graphByTime(list);
+        } else if (col == "copy_t") {
+            std::vector<std::chrono::microseconds> list;
+            for (auto& i : iter) {
+                list.emplace_back(i->getCopytime());
+            }
+            std::cout << "No     Copytime\n\n";
+            graphByTime(list);
+        } else if (col == "tuples") {
+            std::vector<size_t> list;
+            for (auto& i : iter) {
+                list.emplace_back(i->size());
+            }
+            std::cout << "No     Tuples\n\n";
+            graphBySize(list);
         }
     }
 
     void iterRul(std::string c, std::string col) {
-        std::vector<std::vector<std::string>> table = Tools::formatTable(ruleTable, precision);
-        std::vector<std::shared_ptr<Iteration>> iter;
-        for (auto& row : table) {
-            if (row[6] == c) {
-                std::printf("%6s%2s%s\n\n", row[6].c_str(), "", row[5].c_str());
-                iter = run->getRelation(row[7])->getIterations();
-                if (col == "tot_t") {
-                    std::vector<std::chrono::microseconds> list;
-                    for (auto& i : iter) {
-                        bool add = false;
-                        std::chrono::microseconds totalTime{};
-                        for (auto& rul : i->getRules()) {
-                            if (rul.second->getId() == c) {
-                                totalTime += rul.second->getRuntime();
-                                add = true;
-                            }
-                        }
-                        if (add) {
-                            list.emplace_back(totalTime);
-                        }
+        auto ruleId = c;
+
+        auto rule = getRuleById(ruleId);
+        if (rule == nullptr) {
+            std::cout << "Rule not found" << std::endl;
+            return;
+        }
+        auto relation = run->getRelationById(getRelationId(ruleId));
+        if (relation == nullptr) {
+            std::cout << "Relation not found" << std::endl;
+            return;
+        }
+
+        std::cout << std::setw(6) << rule->getId() << "  " << rule->getName() << "\n\n";
+        if (col == "tot_t") {
+            std::vector<std::chrono::microseconds> list;
+            for (auto& iteration : relation->getIterations()) {
+                bool add = false;
+                std::chrono::microseconds totalTime{};
+                for (auto& rulePair : iteration->getRules()) {
+                    if (rulePair.second->getId() == ruleId) {
+                        totalTime += rulePair.second->getRuntime();
+                        add = true;
                     }
-                    std::printf("%4s   %s\n\n", "NO", "RUNTIME");
-                    graphByTime(list);
-                } else if (col == "tuples") {
-                    std::vector<size_t> list;
-                    for (auto& i : iter) {
-                        bool add = false;
-                        size_t totalSize = 0L;
-                        for (auto& rul : i->getRules()) {
-                            if (rul.second->getId() == c) {
-                                totalSize += rul.second->size();
-                                add = true;
-                            }
-                        }
-                        if (add) {
-                            list.emplace_back(totalSize);
-                        }
-                    }
-                    std::printf("%4s   %s\n\n", "NO", "TUPLES");
-                    graphBySize(list);
                 }
-                break;
+                if (add) {
+                    list.emplace_back(totalTime);
+                }
             }
+            std::printf("%4s   %s\n\n", "NO", "RUNTIME");
+            graphByTime(list);
+        } else if (col == "tuples") {
+            std::vector<size_t> list;
+            for (auto& iteration : relation->getIterations()) {
+                bool add = false;
+                size_t totalSize = 0L;
+                for (auto& rulePair : iteration->getRules()) {
+                    if (rulePair.second->getId() == ruleId) {
+                        totalSize += rulePair.second->size();
+                        add = true;
+                    }
+                }
+                if (add) {
+                    list.emplace_back(totalSize);
+                }
+            }
+            std::printf("%4s   %s\n\n", "NO", "TUPLES");
+            graphBySize(list);
         }
     }
 

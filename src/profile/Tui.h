@@ -678,24 +678,21 @@ public:
         usage(rel->getEndtime(), rel->getStarttime());
     }
 
-    bool isValidId(std::string id) {
-        if (id.size() < 2) {
-            return false;
-        }
+    /** Check if a given id is a valid relation id. */
+    bool isValidRelationId(std::string relationId) {
+        return run->getRelationById(relationId) == nullptr;
+    }
 
-        auto relation = run->getRelationById(id);
-        if (id[0] == 'R') {
-            return nullptr != relation;
-        }
-
-        relation = run->getRelationById(getRelationId(id));
+    /** Check if a given id is a valid rule id. */
+    bool isValidRuleId(std::string id) {
+        auto relation = run->getRelationById(getRelationId(id));
 
         // Check for invalid relation name
         if (relation == nullptr) {
             return false;
         }
 
-        // Rules are indexed by srclocator
+        // Rules are indexed by srclocator, so we need to scan
         for (auto& rulePair : relation->getRuleMap()) {
             if (rulePair.second->getId() == id) {
                 return true;
@@ -704,6 +701,7 @@ public:
         return false;
     }
 
+    /** Extract relation id from a rule id. */
     std::string getRelationId(std::string ruleId) {
         if (ruleId.size() < 4) {
             return "";
@@ -718,7 +716,7 @@ public:
 
     /** Print usage statistics during evaluation of a rule. */
     void usageRule(std::string ruleId) {
-        if (!isValidId(ruleId)) {
+        if (!isValidRuleId(ruleId)) {
             std::cout << "Rule does not exist.\n";
             return;
         }
@@ -737,6 +735,11 @@ public:
         std::cout << "Rule ceased to exist. Odd." << std::endl;
     }
 
+    /** Get overall usage statistics.
+     *
+     * @param width maximum number of increments to return.
+     * @return set of Usages of up to width in size
+     */
     std::set<Usage> getUsageStats(size_t width = size_t(-1)) {
         std::set<Usage> usages;
         DirectoryEntry* usageStats = dynamic_cast<DirectoryEntry*>(
@@ -1056,7 +1059,7 @@ public:
     }
 
     /**
-     * @brief Print the top limit relations by frequency
+     * @brief Print the top relations by frequency
      *
      * @param limit how many relations to print
      * @param showlimit set true to show how many relations were not printed
@@ -1077,6 +1080,13 @@ public:
         }
     }
 
+    /**
+     * @brief Print the top rules by frequency
+     *
+     * @param limit how many rules to print
+     * @param showlimit set true to show how many rules were not printed
+     *
+     */
     void rul(size_t limit, bool showLimit = true) {
         auto relations = run->getRelationsByFrequency();
 
@@ -1289,7 +1299,7 @@ public:
         verAtoms(atom_table, ruleName);
     }
 
-    /** Print graph of total time, copy time, or tuples generated per iteration of a relation */
+    /** Print graph of total time, copy time, or tuples generated per iteration of a relation .*/
     void iterRel(std::string relationId, std::string col) {
         auto relation = run->getRelationById(relationId);
         if (relation == nullptr) {
@@ -1323,6 +1333,7 @@ public:
         }
     }
 
+    /** Print graph of total time or tuples generated per iteration of a rule. */
     void iterRul(std::string c, std::string col) {
         auto ruleId = c;
 

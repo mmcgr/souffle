@@ -666,6 +666,7 @@ public:
         std::printf("  %-30s%-5s %s\n", "q", "-", "exit program.");
     }
 
+    /** Print usage statistics during evaluation of a relation */
     void usageRelation(std::string id) {
         const auto rel = run->getRelationById(id);
 
@@ -677,36 +678,63 @@ public:
         usage(rel->getEndtime(), rel->getStarttime());
     }
 
-    void usageRule(std::string id) {
-        std::vector<std::vector<std::string>> formattedRuleTable = Tools::formatTable(ruleTable, precision);
-        std::string relName = "";
-        std::string srcLocator = "";
-        bool found = false;
-        for (auto& row : formattedRuleTable) {
-            if (row[5] == id || row[6] == id) {
-                relName = row[7];
-                srcLocator = row[10];
-                found = true;
-                break;
+    bool isValidId(std::string id) {
+        if (id.size() < 2) {
+            return false;
+        }
+
+        auto relation = run->getRelationById(id);
+        if (id[0] == 'R') {
+            return nullptr != relation;
+        }
+
+        relation = run->getRelationById(getRelationId(id));
+
+        // Check for invalid relation name
+        if (relation == nullptr) {
+            return false;
+        }
+
+        // Rules are indexed by srclocator
+        for (auto& rulePair : relation->getRuleMap()) {
+            if (rulePair.second->getId() == id) {
+                return true;
             }
         }
-        if (!found) {
+        return false;
+    }
+
+    std::string getRelationId(std::string ruleId) {
+        if (ruleId.size() < 4) {
+            return "";
+        }
+        auto pos = ruleId.find_first_of('.');
+        if (pos < 2) {
+            return "";
+        }
+
+        return "R" + ruleId.substr(1, pos - 1);
+    }
+
+    /** Print usage statistics during evaluation of a rule. */
+    void usageRule(std::string ruleId) {
+        if (!isValidId(ruleId)) {
             std::cout << "Rule does not exist.\n";
             return;
         }
-
-        auto rel = run->getRelation(relName);
-        if (rel == nullptr) {
+        auto relation = run->getRelationById(getRelationId(ruleId));
+        if (relation == nullptr) {
             std::cout << "Relation ceased to exist. Odd." << std::endl;
             return;
         }
-        if (rel->getRuleMap().count(srcLocator) == 0) {
-            std::cout << "Rule ceased to exist. Odd." << std::endl;
-            return;
+        for (auto& rulePair : relation->getRuleMap()) {
+            if (rulePair.second->getId() == ruleId) {
+                usage(rulePair.second->getEndtime(), rulePair.second->getStarttime());
+                return;
+            }
         }
 
-        auto& rul = rel->getRuleMap().at(srcLocator);
-        usage(rul->getEndtime(), rul->getStarttime());
+        std::cout << "Rule ceased to exist. Odd." << std::endl;
     }
 
     std::set<Usage> getUsageStats(size_t width = size_t(-1)) {
@@ -1107,7 +1135,7 @@ public:
                 "SAVE_T", "TUPLES", "READS", "TUP/s", "ID", "NAME");
     }
 
-    void relSummary(std::shared_ptr<Relation> relation, bool printHeaders = false) const {
+    void relSummary(std::shared_ptr<Relation> relation) const {
         std::cout << std::setw(8) << Tools::formatTime(relation->getRunTime());
         std::cout << std::setw(8) << Tools::formatTime(relation->getNonRecTime());
         std::cout << std::setw(8) << Tools::formatTime(relation->getRecTime());

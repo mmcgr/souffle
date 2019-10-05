@@ -1088,22 +1088,31 @@ public:
      *
      */
     void rul(size_t limit, bool showLimit = true) {
-        auto relations = run->getRelationsByFrequency();
-
-        ruleTable.sort(sortColumn);
+        auto rules = getAllRules();
         std::cout << "  ----- Rule Table -----\n";
         std::printf(
                 "%8s%8s%8s%8s%8s%8s %s\n\n", "TOT_T", "NREC_T", "REC_T", "TUPLES", "TUP/s", "ID", "RELATION");
         size_t count = 0;
-        for (auto& row : Tools::formatTable(ruleTable, precision)) {
+        for (auto& rulePair : rules) {
             if (++count > limit) {
                 if (showLimit) {
-                    std::cout << (ruleTable.getRows().size() - resultLimit) << " rows not shown" << std::endl;
+                    std::cout << (rules.size() - resultLimit) << " rows not shown" << std::endl;
                 }
                 break;
             }
-            std::printf("%8s%8s%8s%8s%8s%8s %s\n", row[0].c_str(), row[1].c_str(), row[2].c_str(),
-                    row[4].c_str(), row[9].c_str(), row[6].c_str(), row[7].c_str());
+            auto& rule = rulePair.second;
+
+            std::cout << std::setw(8) << Tools::formatTime(rule->getRuntime());
+            std::cout << std::setw(8) << Tools::formatTime(rule->getNonrecursiveRuntime());
+            std::cout << std::setw(8) << Tools::formatTime(rule->getRecursiveRuntime());
+            std::cout << std::setw(8) << Tools::formatNum(rule->size());
+            if (rule->getRuntime().count() != 0) {
+                double tuplesPerSecond = rule->size() / (rule->getRuntime().count() / 1000000.0);
+                std::cout << std::setw(8) << Tools::formatNum(tuplesPerSecond);
+            } else {
+                std::cout << std::setw(8) << "-";
+            }
+            std::cout << std::setw(8) << rule->getId() << std::endl;
         }
     }
 
@@ -1162,6 +1171,19 @@ public:
         }
 
         return nullptr;
+    }
+
+    std::map<std::string, std::shared_ptr<SummedRule>> getAllRules() {
+        std::map<std::string, std::shared_ptr<SummedRule>> rules;
+        for (auto& relationPair : run->getRelationMap()) {
+            auto& relation = relationPair.second;
+            for (auto& rule : relation->getRuleTotals()) {
+                rules.try_emplace(
+                        rule->getId(), std::make_shared<SummedRule>(rule->getName(), rule->getId()));
+                *rules[rule->getId()] += *rule;
+            }
+        }
+        return rules;
     }
 
     void relSummaryHeaders() const {

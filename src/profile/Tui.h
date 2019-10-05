@@ -298,6 +298,7 @@ public:
         return ss;
     }
 
+    // TODO: remove ruletable references
     std::stringstream& genJsonRules(
             std::stringstream& ss, const std::string& name, size_t maxRows = size_t(-1)) {
         auto comma = [&ss](bool& first, const std::string& delimiter = ", ") {
@@ -1014,6 +1015,7 @@ public:
         if (totalRulesEntry != nullptr) {
             totalRules = std::stoul(totalRulesEntry->getText());
         } else {
+            // TODO: remove ruletable references
             totalRules = ruleTable.getRows().size();
         }
         std::printf("%11s%10s%10s%10s%10s%20s\n", "runtime", "loadtime", "savetime", "relations", "rules",
@@ -1048,6 +1050,7 @@ public:
         }
         std::cout << "Slowest rules to fully evaluate\n";
         rul(3, false);
+        // TODO: remove ruletable references
         for (size_t i = ruleTable.getRows().size(); i < 3; ++i) {
             std::cout << "\n";
         }
@@ -1264,6 +1267,7 @@ public:
         Table versionTable = out.getVersions(strRel, str);
         versionTable.sort(sortColumn);
 
+        // TODO: remove ruletable references
         ruleTable.sort(sortColumn);  // why isnt it sorted in the original java?!?
 
         std::vector<std::vector<std::string>> formattedRuleTable = Tools::formatTable(ruleTable, precision);

@@ -298,7 +298,8 @@ public:
         return ss;
     }
 
-    std::stringstream& genJsonRules(std::stringstream& ss, const std::string& name, size_t maxRows) {
+    std::stringstream& genJsonRules(
+            std::stringstream& ss, const std::string& name, size_t maxRows = size_t(-1)) {
         auto comma = [&ss](bool& first, const std::string& delimiter = ", ") {
             if (!first) {
                 ss << delimiter;
@@ -575,7 +576,7 @@ public:
         ss << ",\n";
         genJsonRelations(ss, "rel", run->getRelationMap().size());
         ss << ",\n";
-        genJsonRules(ss, "rul", ruleTable.rows.size());
+        genJsonRules(ss, "rul");
         ss << ",\n";
         genJsonUsage(ss);
         ss << ",\n";

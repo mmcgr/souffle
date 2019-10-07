@@ -45,7 +45,7 @@ m4_define([TEST_PROFILE_COMMAND],[
   m4_define([CATEGORY],[$2])
   m4_define([CONF],[$3])
   m4_define([TESTDIR],["$TESTS"/CATEGORY/TESTNAME])
-  m4_define([LOG_FILE],[$1-profile.log])
+  m4_define([LOG_FILE],[$1-profile.json])
   m4_define([PROGRAM],[TESTDIR/TESTNAME.dl])
   m4_define([FACTS],[TESTDIR/facts])
   m4_define([EXPECTED_OUTPUT],["TESTDIR/out/$4.out"])

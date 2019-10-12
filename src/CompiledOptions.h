@@ -17,12 +17,15 @@
 
 #pragma once
 
-#include <cstdio>
+#include "utility/MiscUtil.h"
+#include "utility/ParallelUtil.h"
 #include <iostream>
 #include <string>
 #include <getopt.h>
 #include <stdlib.h>
 #include <sys/stat.h>
+#include <sys/types.h>
+#include <unistd.h>
 
 namespace souffle {
 
@@ -165,7 +168,6 @@ public:
                     profile_name = optarg;
                     break;
                 case 'j':
-#ifdef _OPENMP
                     if (std::string(optarg) == "auto") {
                         num_jobs = 0;
                     } else {
@@ -177,9 +179,6 @@ public:
                             ok = false;
                         }
                     }
-#else
-                    std::cerr << "\nWarning: OpenMP was not enabled in compilation\n\n";
-#endif
                     break;
                 default: printHelpPage(exec_name); return false;
             }
@@ -211,14 +210,14 @@ private:
             std::cerr << "    -p <file>, --profile=<file>  -- Specify filename for profiling\n";
             std::cerr << "                                    (default: " << profile_name << ")\n";
         }
-#ifdef _OPENMP
         std::cerr << "    -j <NUM>, --jobs=<NUM>       -- Specify number of threads\n";
         if (num_jobs > 0) {
             std::cerr << "                                    (default: " << num_jobs << ")\n";
         } else {
             std::cerr << "                                    (default: auto)\n";
         }
-#endif
+        std::cerr << "    -i <N>, --index=<N>          -- Specify index of stratum to be executed\n";
+        std::cerr << "                                    (or each in order if omitted)\n";
         std::cerr << "    -h                           -- prints this help page.\n";
         std::cerr << "--------------------------------------------------------------------\n";
         std::cout << " Copyright (c) 2016-20 The Souffle Developers." << std::endl;

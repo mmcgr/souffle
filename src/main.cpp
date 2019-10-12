@@ -242,7 +242,6 @@ int main(int argc, char** argv) {
         }
 
         /* for the jobs option, to determine the number of threads used */
-#ifdef _OPENMP
         if (isNumber(Global::config().get("jobs").c_str())) {
             if (std::stoi(Global::config().get("jobs")) < 1) {
                 throw std::runtime_error("-j/--jobs may only be set to 'auto' or an integer greater than 0.");
@@ -253,12 +252,6 @@ int main(int argc, char** argv) {
             }
             Global::config().set("jobs", "0");
         }
-#else
-        // Check that -j option has not been changed from the default
-        if (Global::config().get("jobs") != "1" && !Global::config().has("no-warn")) {
-            std::cerr << "\nThis installation of Souffle does not support concurrent jobs.\n";
-        }
-#endif
 
         /* if an output directory is given, check it exists */
         if (Global::config().has("output-dir") && !Global::config().has("output-dir", "-") &&

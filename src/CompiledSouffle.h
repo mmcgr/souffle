@@ -56,10 +56,6 @@
 #include <utility>
 #include <vector>
 
-#if defined(_OPENMP)
-#include <omp.h>
-#endif
-
 namespace souffle {
 
 extern "C" {

@@ -60,6 +60,8 @@
 
 #else
 
+#define omp_set_num_threads(INT)
+
 // support for a parallel region => sequential execution
 #define PARALLEL_START {
 #define PARALLEL_END }

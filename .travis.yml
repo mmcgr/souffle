@@ -89,6 +89,17 @@ jobs:
 
 # Testing stage without Evaluation tests (-j8,-c -j8)
   - stage: Testing
+    os: windows
+    language: cpp
+    env:
+    - "msvc non-eval"
+    - SOUFFLE_CATEGORY=Unit,Syntactic,Semantic,Interface,Profile,Provenance SOUFFLE_CONFS="-j8,-c -j8"
+    before_script:
+    - .travis/init_windows_test.sh
+    script:
+    - .travis/run_windows_test.sh
+
+  - stage: Testing
     <<: *osxgcc
     name: "OSX gcc non-eval"
     env:

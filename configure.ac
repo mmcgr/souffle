@@ -98,6 +98,36 @@ AM_CONDITIONAL([SWIG], [test "x$enable_swig" = "xyes"])
 AC_PROG_CXX
 AX_CXX_COMPILE_STDCXX(17, noext)
 
+AC_LANG_PUSH([C++])
+AC_CHECK_HEADERS([filesystem], [], [
+  AC_MSG_ERROR([No c++17 filesystem headers])
+])
+
+# Test for clang version of filesystem library
+SAVED_LIBS=$LIBS
+LIBS="$LIBS -lc++fs"
+
+AC_LINK_IFELSE(
+  [AC_LANG_PROGRAM([#include <filesystem>],
+    [std::filesystem::current_path();])],
+  [HAVE_FS=1]],
+  [LIBS=$SAVED_LIBS]
+)
+
+AS_IF([test "x$HAVE_FS" = "x"], [
+  # test for gcc version of filesystem library
+  LIBS="$SAVED_LIBS -lstdc++fs"
+
+  AC_LINK_IFELSE(
+    [AC_LANG_PROGRAM([#include <filesystem>],
+      [std::filesystem::current_path();])],
+    [HAVE_FS=1]],
+    [LIBS=$SAVED_LIBS]
+  )
+])
+
+AC_LANG_POP([C++])
+
 AC_PROG_INSTALL
 AC_PROG_MAKE_SET
 

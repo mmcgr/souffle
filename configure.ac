@@ -36,7 +36,7 @@ AC_CONFIG_MACRO_DIR([m4])
 
 dnl Do not set default CFLAGS and CXXFLAGS
 ENV_CXXFLAGS="$CXXFLAGS"
-CXXFLAGS=" -fwrapv "
+CXXFLAGS=" -fwrapv -Wall -ffunction-sections -fdata-sections -Wl,--gc-sections"
 
 # Disable provenance
 AC_ARG_ENABLE(

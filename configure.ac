@@ -73,7 +73,7 @@ AC_ARG_ENABLE(
   [AS_HELP_STRING([--enable-debug], [Enable debug mode])]
 )
 
-AS_IF([test "x$enable_debug" = "xyes"], [CXXFLAGS="$CXXFLAGS -O0 -g3"],
+AS_IF([test "x$enable_debug" = "xyes"], [CXXFLAGS="$CXXFLAGS -Og -g3"],
   [test "x$enable_debug" != "xyes"], [CXXFLAGS="$CXXFLAGS -O3"]
 )
 

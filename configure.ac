@@ -77,12 +77,6 @@ AS_IF([test "x$enable_debug" = "xyes"], [CXXFLAGS="$CXXFLAGS -O0 -g3"],
   [test "x$enable_debug" != "xyes"], [CXXFLAGS="$CXXFLAGS -O3"]
 )
 
-if test "$BUILD_TYPE" == "Debug" ; then
-  AC_MSG_WARN( [BUILD_TYPE environment variable is deprecated. Use --enable-debug])
-  # set up debug mode
-  CXXFLAGS="$CXXFLAGS -O0 -g3"
-fi
-
 # Enable SWIG
 AC_ARG_ENABLE(
   [swig],

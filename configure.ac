@@ -34,9 +34,38 @@ AC_CONFIG_HEADERS([src/config.h])
 AC_CONFIG_MACRO_DIRS([m4])
 AC_CONFIG_MACRO_DIR([m4])
 
+if test -n "$SOUFFLE_PACKAGING"; then
+  case $host_os in
+    darwin* )
+      DISTRIBUTION=osx
+    ;;
+    linux*)
+      AC_CHECK_PROG(LSB_RELEASE, lsb_release, lsb_release)
+      AS_IF([test -z "$LSB_RELEASE"], [AC_MSG_ERROR([lsb_release required to detect LINUX distribution not found.])])
+      DISTRIBUTION=[`lsb_release -i | sed 's/^.*:[ \t]\+//' | tr '[A-Z]' '[a-z]'`]
+    ;;
+    *BSD* | *bsd* )
+      DISTRIBUTION=bsd
+    ;;
+    *)
+      AC_MSG_ERROR([Unsupported platform])
+    ;;
+  esac
+  echo "Enable packaging for: $DISTRIBUTION"
+fi
+
 dnl Do not set default CFLAGS and CXXFLAGS
 ENV_CXXFLAGS="$CXXFLAGS"
-CXXFLAGS=" -fwrapv -Wall -ffunction-sections -fdata-sections -Wl,--gc-sections"
+CXXFLAGS=" -fwrapv -Wall -ffunction-sections -fdata-sections"
+
+case $host_os in
+  darwin* )
+    CXXFLAGS="$CXXFLAGS -Wl,-dead_strip"
+  ;;
+  *)
+    CXXFLAGS="$CXXFLAGS -Wl,--gc-sections"
+  ;;
+esac
 
 # Disable provenance
 AC_ARG_ENABLE(
@@ -158,6 +187,7 @@ AS_IF([test "x$enable_sqlite" != "xno"], [
 ])
 AM_CONDITIONAL([SQLITE], [test "x$enable_sqlite" != "xno"])
 
+<<<<<<< HEAD
 if test -n "$SOUFFLE_PACKAGING"; then
   case $host_os in
     darwin* )
@@ -177,6 +207,8 @@ if test -n "$SOUFFLE_PACKAGING"; then
   echo "Enable packaging for: $DISTRIBUTION"
 fi
 
+=======
+>>>>>>> Use osx specific flags on osx
 AC_ARG_ENABLE(
   [64bit-domain],
   [AS_HELP_STRING([--enable-64bit-domain], [Enable 64-bit number values in Datalog tuples])]

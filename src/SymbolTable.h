@@ -20,8 +20,9 @@
 #include "utility/MiscUtil.h"
 #include "utility/ParallelUtil.h"
 #include "utility/StreamUtil.h"
-#include <algorithm>
-#include <cstdlib>
+#include <arrays>
+#include <atomic>
+#include <cassert>
 #include <deque>
 #include <initializer_list>
 #include <iostream>
@@ -31,6 +32,59 @@
 #include <vector>
 
 namespace souffle {
+
+class SymbolStore {
+    static constexpr std::size_t BLOCK_SIZE = 1024 * 1024;
+    std::array<std::atomic<string*>>, BLOCK_SIZE > symbols{};
+    std::atomic<std::size_t> currentSize{0};
+
+public:
+    std::size_t getNextId() {
+        std::size_t result = currentSize++;
+        while (symbols[result % BLOCK_SIZE] == nullptr) {
+            std::string* newArray = new std::string[BLOCK_SIZE];
+            for (std::size_t& current : newArray) {
+                current = nullptr;
+            }
+            if (!symbols[result % BLOCK_SIZE].compare_exchange_strong(nullptr, newArray)) {
+                delete newArray;
+            }
+        }
+        return result;
+    }
+
+    void insert(std::size_t id, std::string symbol) {
+        assert(id <= currentSize, "Index out of bounds");
+        symbols[id % BLOCK_SIZE][id / BLOCK_SIZE] = new std::string(symbol);
+    }
+
+    std::size_t insert(std::string symbol) {
+        std::size_t id = getNextId();
+        insert(id, symbol);
+        return id;
+    }
+
+    const std::string& getSymbol(std::size_t id) const {
+        assert(id <= currentSize, "Index out of bounds");
+        return symbols[id % BLOCK_SIZE][id / BLOCK_SIZE];
+    }
+
+    SymbolStore() = default;
+    SymbolStore(const SymbolStore&) = delete;
+    ~SymbolStore() {
+        for (std::atomic<std::string*>& current : symbols) {
+            for (std::size_t i = 0; i < BLOCK_SIZE; ++i) {
+                delete current[i];
+            }
+        }
+    }
+}
+
+// Concurrent trie map, tips store ids
+// Get id by inserting string into SymbolStore
+// Add string to id mapping to idstore
+class IdStore {
+}
 
 /**
  * @class SymbolTable

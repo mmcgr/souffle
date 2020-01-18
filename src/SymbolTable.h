@@ -35,28 +35,25 @@ namespace souffle {
 
 class SymbolStore {
     static constexpr std::size_t BLOCK_SIZE = 1024 * 1024;
-    std::array<std::atomic<std::string*>, BLOCK_SIZE> symbols{};
+    std::unique_ptr<std::atomic<std::string*>[]> symbolBlocks { new std::atomic<std::string*>[ BLOCK_SIZE ] };
     std::atomic<std::size_t> currentSize{0};
 
     void insert(std::size_t id, std::string symbol) {
         assert(id <= currentSize && "Index out of bounds");
-        symbols[id % BLOCK_SIZE][id / BLOCK_SIZE] = symbol;
+        symbolBlocks[id % BLOCK_SIZE][id / BLOCK_SIZE] = symbol;
     }
 
 public:
     std::size_t getNextId() {
         std::size_t result = currentSize++;
-        while (symbols[result % BLOCK_SIZE] == nullptr) {
-            std::string* oldArray = symbols[result % BLOCK_SIZE];
+        while (symbolBlocks[result % BLOCK_SIZE] == nullptr) {
+            std::string* oldArray = symbolBlocks[result % BLOCK_SIZE].load();
             if (oldArray != nullptr) {
                 break;
             }
             std::string* newArray = new std::string[BLOCK_SIZE];
-            for (std::size_t i = 0; i < BLOCK_SIZE; ++i) {
-                newArray[i] = nullptr;
-            }
-            if (!symbols[result % BLOCK_SIZE].compare_exchange_strong(oldArray, newArray)) {
-                delete newArray;
+            if (!symbolBlocks[result % BLOCK_SIZE].compare_exchange_strong(oldArray, newArray)) {
+                delete[] newArray;
             }
         }
         return result;
@@ -68,17 +65,48 @@ public:
         return id;
     }
 
-    const std::string& getSymbol(std::size_t id) const {
-        assert(id <= currentSize && "Index out of bounds");
-        return symbols[id % BLOCK_SIZE][id / BLOCK_SIZE];
+    const std::string& operator[](std::size_t id) const {
+        assert(id < currentSize && "Index out of bounds");
+        return symbolBlocks[id % BLOCK_SIZE][id / BLOCK_SIZE];
     }
 
-    SymbolStore() = default;
-    SymbolStore(const SymbolStore&) = delete;
-    ~SymbolStore() {
-        for (std::atomic<std::string*>& current : symbols) {
-            delete current.load();
+    std::size_t size() const {
+        return currentSize;
+    }
+
+    void clear() {
+        currentSize = 0;
+        for (std::size_t i = 0; i < BLOCK_SIZE; ++i) {
+            delete[] symbolBlocks[i].load();
+            symbolBlocks[i].store(nullptr);
         }
+    }
+
+    SymbolStore() {
+        for (std::size_t i = 0; i < BLOCK_SIZE; ++i) {
+            symbolBlocks[i].store(nullptr);
+        }
+    }
+
+    SymbolStore(const SymbolStore& other) {
+        for (std::size_t i = 0; i < BLOCK_SIZE; ++i) {
+            symbolBlocks[i].store(nullptr);
+        }
+        for (std::size_t i = 0; i < other.currentSize; ++i) {
+            insert(other[i]);
+        }
+    }
+
+    SymbolStore& operator=(const SymbolStore& other) {
+        clear();
+        for (std::size_t i = 0; i < other.currentSize; ++i) {
+            insert(other[i]);
+        }
+        return *this;
+    }
+
+    ~SymbolStore() {
+        clear();
     }
 };
 
@@ -90,7 +118,7 @@ public:
 class IdStore {
 public:
     struct IdStoreNode {
-        std::atomic<std::size_t> id = 0;
+        std::atomic<std::size_t> id{0};
         std::atomic<std::unordered_map<char, std::atomic<IdStoreNode*>>*> children =
                 new std::unordered_map<char, std::atomic<IdStoreNode*>>;
         IdStoreNode* get(char c) {
@@ -222,7 +250,7 @@ private:
     mutable Lock access;
 
     /** Map indices to strings. */
-    std::deque<std::string> numToStr;
+    SymbolStore numToStr;
 
     /** Map strings to indices. */
     std::unordered_map<std::string, size_t> strToNum;
@@ -233,9 +261,8 @@ private:
         size_t index;
         auto it = strToNum.find(symbol);
         if (it == strToNum.end()) {
-            index = numToStr.size();
+            index = numToStr.insert(symbol);
             strToNum[symbol] = index;
-            numToStr.push_back(symbol);
         } else {
             index = it->second;
         }
@@ -245,8 +272,8 @@ private:
     /** Convenience method to place a new symbol in the table, if it does not exist. */
     inline void newSymbol(const std::string& symbol) {
         if (strToNum.find(symbol) == strToNum.end()) {
-            strToNum[symbol] = numToStr.size();
-            numToStr.push_back(symbol);
+            std::size_t index = numToStr.insert(symbol);
+            strToNum[symbol] = index;
         }
     }
 
@@ -255,62 +282,45 @@ public:
     SymbolTable() = default;
 
     /** Copy constructor, performs a deep copy. */
-    SymbolTable(const SymbolTable& other) : numToStr(other.numToStr), strToNum(other.strToNum) {}
-
-    /** Copy constructor for r-value reference. */
-    SymbolTable(SymbolTable&& other) noexcept {
-        numToStr.swap(other.numToStr);
-        strToNum.swap(other.strToNum);
+    SymbolTable(const SymbolTable& other) {
+        std::size_t size = other.size();
+        for (std::size_t i = 0; i < size; ++i) {
+            newSymbol(other.resolve(i));
+        }
     }
 
     SymbolTable(std::initializer_list<std::string> symbols) {
-        strToNum.reserve(symbols.size());
         for (const auto& symbol : symbols) {
             newSymbol(symbol);
         }
     }
 
-    /** Destructor, frees memory allocated for all strings. */
-    virtual ~SymbolTable() = default;
-
-    /** Assignment operator, performs a deep copy and frees memory allocated for all strings. */
     SymbolTable& operator=(const SymbolTable& other) {
-        if (this == &other) {
-            return *this;
-        }
         numToStr = other.numToStr;
         strToNum = other.strToNum;
         return *this;
     }
 
-    /** Assignment operator for r-value references. */
-    SymbolTable& operator=(SymbolTable&& other) noexcept {
-        numToStr.swap(other.numToStr);
-        strToNum.swap(other.strToNum);
-        return *this;
-    }
+    /** Destructor, frees memory allocated for all strings. */
+    virtual ~SymbolTable() = default;
 
     /** Find the index of a symbol in the table, inserting a new symbol if it does not exist there
      * already. */
     RamDomain lookup(const std::string& symbol) {
-        {
-            auto lease = access.acquire();
-            (void)lease;  // avoid warning;
-            return static_cast<RamDomain>(newSymbolOfIndex(symbol));
-        }
+        auto lease = access.acquire();
+        (void)lease;  // avoid warning;
+        return static_cast<RamDomain>(newSymbolOfIndex(symbol));
     }
 
     /** Finds the index of a symbol in the table, giving an error if it's not found */
     RamDomain lookupExisting(const std::string& symbol) const {
-        {
-            auto lease = access.acquire();
-            (void)lease;  // avoid warning;
-            auto result = strToNum.find(symbol);
-            if (result == strToNum.end()) {
-                fatal("Error string not found in call to `SymbolTable::lookupExisting`: `%s`", symbol);
-            }
-            return static_cast<RamDomain>(result->second);
+        auto lease = access.acquire();
+        (void)lease;  // avoid warning;
+        auto result = strToNum.find(symbol);
+        if (result == strToNum.end()) {
+            fatal("Error string not found in call to `SymbolTable::lookupExisting`: `%s`", symbol);
         }
+        return static_cast<RamDomain>(result->second);
     }
 
     /** Find the index of a symbol in the table, inserting a new symbol if it does not exist there
@@ -323,16 +333,7 @@ public:
      * bounds.
      */
     const std::string& resolve(const RamDomain index) const {
-        {
-            auto lease = access.acquire();
-            (void)lease;  // avoid warning;
-            auto pos = static_cast<size_t>(index);
-            if (pos >= size()) {
-                // TODO: use different error reporting here!!
-                fatal("Error index out of bounds in call to `SymbolTable::resolve`. index = `%d`", index);
-            }
-            return numToStr[pos];
-        }
+        return numToStr[static_cast<size_t>(index)];
     }
 
     const std::string& unsafeResolve(const RamDomain index) const {
@@ -348,13 +349,10 @@ public:
      * inserts
      * of single symbols. */
     void insert(const std::vector<std::string>& symbols) {
-        {
-            auto lease = access.acquire();
-            (void)lease;  // avoid warning;
-            strToNum.reserve(size() + symbols.size());
-            for (auto& symbol : symbols) {
-                newSymbol(symbol);
-            }
+        auto lease = access.acquire();
+        (void)lease;  // avoid warning;
+        for (auto& symbol : symbols) {
+            newSymbol(symbol);
         }
     }
 
@@ -362,24 +360,20 @@ public:
      * symbols
      * in bulk. */
     void insert(const std::string& symbol) {
-        {
-            auto lease = access.acquire();
-            (void)lease;  // avoid warning;
-            newSymbol(symbol);
-        }
+        auto lease = access.acquire();
+        (void)lease;  // avoid warning;
+        newSymbol(symbol);
     }
 
     /** Print the symbol table to the given stream. */
     void print(std::ostream& out) const {
-        {
-            out << "SymbolTable: {\n\t";
-            out << join(strToNum, "\n\t",
-                           [](std::ostream& out, const std::pair<std::string, std::size_t>& entry) {
-                               out << entry.first << "\t => " << entry.second;
-                           })
-                << "\n";
-            out << "}\n";
-        }
+        out << "SymbolTable: {\n\t";
+        out << join(strToNum, "\n\t",
+                       [](std::ostream& out, const std::pair<std::string, std::size_t>& entry) {
+                           out << entry.first << "\t => " << entry.second;
+                       })
+            << "\n";
+        out << "}\n";
     }
 
     /** Check if the symbol table contains a string */
@@ -396,14 +390,7 @@ public:
 
     /** Check if the symbol table contains an index */
     bool contains(const RamDomain index) const {
-        auto lease = access.acquire();
-        (void)lease;  // avoid warning;
-        auto pos = static_cast<size_t>(index);
-        if (pos >= size()) {
-            return false;
-        } else {
-            return true;
-        }
+        return static_cast<std::size_t>(index) < size();
     }
 
     Lock::Lease acquireLock() const {

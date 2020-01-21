@@ -1,6 +1,6 @@
 /*
  * Souffle - A Datalog Compiler
- * Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved
+ * Copyright (c) 2020, The Souffle Developers. All rights reserved
  * Licensed under the Universal Permissive License v 1.0 as shown at:
  * - https://opensource.org/licenses/UPL
  * - <souffle root>/licenses/SOUFFLE-UPL.txt
@@ -26,6 +26,8 @@
 #include <deque>
 #include <initializer_list>
 #include <iostream>
+#include <iterator>
+#include <mutex>
 #include <string>
 #include <unordered_map>
 #include <utility>
@@ -35,24 +37,54 @@ namespace souffle {
 
 class SymbolStore {
     static constexpr std::size_t BLOCK_SIZE = 1024 * 1024;
-    std::unique_ptr<std::atomic<std::string*>[]> symbolBlocks { new std::atomic<std::string*>[ BLOCK_SIZE ] };
-    std::atomic<std::size_t> currentSize{0};
-
-    void insert(std::size_t id, std::string symbol) {
-        assert(id <= currentSize && "Index out of bounds");
-        symbolBlocks[id % BLOCK_SIZE][id / BLOCK_SIZE] = symbol;
-    }
 
 public:
+    class const_iterator {
+        std::size_t index = 0;
+        const SymbolStore& store;
+
+    public:
+        using iterator_category = std::forward_iterator_tag;
+        using value_type = std::string;
+        using difference_type = std::size_t;
+        using pointer = const std::string*;
+        using reference = const std::string&;
+        explicit const_iterator(const SymbolStore& store, std::size_t index = 0)
+                : index(index), store(store) {}
+        const_iterator& operator++() {
+            ++index;
+            return *this;
+        }
+        bool operator==(const const_iterator& other) const {
+            return index == other.index && &store == &store;
+        }
+        bool operator!=(const const_iterator& other) const {
+            return !operator==(other);
+        }
+        reference operator*() const {
+            return store[index];
+        }
+        pointer operator->() const {
+            return &store[index];
+        }
+    };
+
+    const_iterator begin() const {
+        return const_iterator(*this);
+    }
+    const_iterator end() const {
+        return const_iterator(*this, currentSize);
+    }
+
     std::size_t getNextId() {
         std::size_t result = currentSize++;
-        while (symbolBlocks[result % BLOCK_SIZE] == nullptr) {
-            std::string* oldArray = symbolBlocks[result % BLOCK_SIZE].load();
+        while (symbolBlocks[result / BLOCK_SIZE] == nullptr) {
+            std::string* oldArray = symbolBlocks[result / BLOCK_SIZE].load();
             if (oldArray != nullptr) {
                 break;
             }
             std::string* newArray = new std::string[BLOCK_SIZE];
-            if (!symbolBlocks[result % BLOCK_SIZE].compare_exchange_strong(oldArray, newArray)) {
+            if (!symbolBlocks[result / BLOCK_SIZE].compare_exchange_strong(oldArray, newArray)) {
                 delete[] newArray;
             }
         }
@@ -66,8 +98,8 @@ public:
     }
 
     const std::string& operator[](std::size_t id) const {
-        assert(id < currentSize && "Index out of bounds");
-        return symbolBlocks[id % BLOCK_SIZE][id / BLOCK_SIZE];
+        // assert(id < currentSize && "Index out of bounds");
+        return symbolBlocks[id / BLOCK_SIZE][id % BLOCK_SIZE];
     }
 
     std::size_t size() const {
@@ -108,133 +140,170 @@ public:
     ~SymbolStore() {
         clear();
     }
+
+private:
+    std::unique_ptr<std::atomic<std::string*>[]> symbolBlocks { new std::atomic<std::string*>[ BLOCK_SIZE ] };
+    std::atomic<std::size_t> currentSize{0};
+
+    void insert(std::size_t id, std::string symbol) {
+        assert(id <= currentSize && "Index out of bounds");
+        symbolBlocks[id / BLOCK_SIZE][id % BLOCK_SIZE] = symbol;
+    }
 };
 
-// Concurrent trie map, tips store ids
+// Concurrent trie map
 // Get id by inserting string into SymbolStore
 // Add string to id mapping to idstore
 //
-// Hmm. TODO: mark deleted nodes? Currently we risk reusing a deleted parent
 class IdStore {
-public:
-    struct IdStoreNode {
-        std::atomic<std::size_t> id{0};
-        std::atomic<std::unordered_map<char, std::atomic<IdStoreNode*>>*> children =
-                new std::unordered_map<char, std::atomic<IdStoreNode*>>;
-        IdStoreNode* get(char c) {
-            auto it = children.load()->find(c);
-            if (it == children.load()->end()) {
-                return nullptr;
-            }
-            return it->second;
-        }
-        IdStoreNode() = default;
-        IdStoreNode(std::size_t id, std::unordered_map<char, std::atomic<IdStoreNode*>>* children)
-                : id(id), children(children) {}
-        bool addChild(char c, IdStoreNode* node) {
-            auto* oldChildren = children.load();
-            if (oldChildren->count(c) != 0) {
-                return false;
-            }
-            auto* newChildren = new std::unordered_map<char, std::atomic<IdStoreNode*>>();
-            for (auto& pair : *oldChildren) {
-                (*newChildren)[pair.first].store(pair.second);
-            }
-            (*newChildren)[c].store(node);
-            if (children.compare_exchange_strong(oldChildren, newChildren)) {
-                delete oldChildren;
-                return true;
-            } else {
-                delete newChildren;
-                return false;
-            }
-        }
-        ~IdStoreNode() {
-            for (auto& child : *children) {
-                delete child.second;
-            }
-            delete children.load();
-        }
-    };
-    std::atomic<IdStoreNode*> root = new IdStoreNode(0, {});
+    static constexpr std::size_t TRIE_WIDTH = 16;
 
-    IdStoreNode* get(const std::string& symbol) {
-        IdStoreNode* current = root;
-        for (char c : symbol) {
-            current = current->get(c);
-            if (current == nullptr) {
+public:
+    struct Node {
+        static inline uint8_t getNibble(std::size_t index, const std::string& symbol) {
+            uint8_t nibble = symbol[index / 2];
+            if (index % 2 == 0) {
+                nibble &= 0x0f;
+            } else {
+                nibble >>= 4;
+            }
+            return nibble;
+        }
+
+        const std::pair<std::size_t, Node*> get(std::size_t index, const std::string& symbol) {
+            if (index == 2 * symbol.size()) {
+                return {index, this};
+            }
+            uint8_t nibble = getNibble(index, symbol);
+            if (children[nibble] == nullptr) {
+                return {index, this};
+            }
+            return children[nibble].load()->get(index + 1, symbol);
+        }
+        bool addChild(uint8_t c, Node* node) {
+            //	assert(c < TRIE_WIDTH && "out of bounds");
+            Node* oldNode = children[c];
+            if (oldNode != nullptr) {
+                return false;
+            }
+            return children[c].compare_exchange_strong(oldNode, node);
+        }
+
+        Node() = default;
+
+        Node(std::size_t id) : id(id) {}
+
+        ~Node() {
+            for (auto& child : children) {
+                delete child.load();
+            }
+        }
+
+        Node* clone() const {
+            auto* clone = new Node(id);
+
+            for (std::size_t i = 0; i < TRIE_WIDTH; ++i) {
+                auto* child = children[i].load();
+                if (child == nullptr) {
+                    continue;
+                }
+                clone->children[i].store(children[i].load()->clone());
+            }
+            return clone;
+        }
+
+        std::atomic<std::size_t> id{0};
+        std::array<std::atomic<Node*>, TRIE_WIDTH> children = {};
+    };
+
+    std::pair<std::size_t, Node*> get(const std::string& symbol) const {
+        return root.load()->get(0, symbol);
+    }
+
+    std::pair<std::size_t, Node*> getNearest(const std::string& symbol) {
+        Node* current = root;
+        std::size_t i = 0;
+        for (; i < 2 * symbol.size(); ++i) {
+            uint8_t c = Node::getNibble(i, symbol);
+            if (current->children[c] == nullptr) {
                 break;
             }
+            current = current->children[c];
         }
-        return current;
-    }
-    std::size_t getId(const std::string& symbol) {
-        IdStoreNode* node = get(symbol);
-        if (node == nullptr) {
-            throw std::invalid_argument("Symbol not found");
-        }
-        return node->id;
+        return {i, current};
     }
 
-    bool contains(const std::string& symbol) {
-        return get(symbol) != nullptr;
+    std::size_t getId(const std::string& symbol) const {
+        auto resultPair = get(symbol);
+        if (resultPair.first == 2 * symbol.size()) {
+            return resultPair.second->id;
+        }
+
+        throw std::invalid_argument("Symbol not found");
     }
+
+    bool contains(const std::string& symbol) const {
+        if (symbol.empty()) {
+            return true;
+        }
+        auto resultPair = get(symbol);
+        return resultPair.first == 2 * symbol.size() && resultPair.second->id != 0;
+    }
+
+    std::size_t insert(Node* node, std::size_t index, std::size_t id, const std::string& symbol) {
+        // We may be updating the current node with an id, so check this first
+        if (index == 2 * symbol.size()) {
+            std::size_t oldId = node->id;
+            while (oldId == 0) {
+                node->id.compare_exchange_strong(oldId, id);
+                oldId = node->id;
+            }
+            return node->id;
+        }
+        // Add a new child
+        ++index;
+        Node* newChild = new Node(index == 2 * symbol.size() ? id : 0);
+        uint8_t nibble = Node::getNibble(index - 1, symbol);
+        if (node->addChild(nibble, newChild)) {
+            if (index == 2 * symbol.size()) {
+                return newChild->id;
+            }
+            return insert(newChild, index, id, symbol);
+        }
+        // Something went wrong, probably another node already inserted
+        // Clean up
+        delete newChild;
+        --index;
+        // Search again from the current node
+        auto resultPair = node->get(index, symbol);
+        // If the symbol has been inserted then we can return the new id
+        if (resultPair.first == 2 * symbol.size() && resultPair.second->id > 0) {
+            return resultPair.second->id;
+        }
+        // Let's try again
+        return insert(node, index, id, symbol);
+    }
+
     std::size_t insert(std::size_t id, const std::string& symbol) {
         if (symbol.empty()) {
             return 0;
         }
-        // Check root node
-        while (root.load()->get(symbol.front()) == nullptr) {
-            IdStoreNode* newChild = makeChain(id, symbol, 0);
-            if (root.load()->addChild(symbol.front(), newChild)) {
-                return id;
-            }
-            delete newChild;
+
+        auto nearest = get(symbol);
+        if (nearest.first == 2 * symbol.size() && nearest.second->id != 0) {
+            return nearest.second->id;
         }
-        // Search for matching node
-        IdStoreNode* parent = root;
-        IdStoreNode* current = parent->get(symbol.front());
-        IdStoreNode* next = nullptr;
-        std::size_t i = 1;
-        for (; i < symbol.size();) {
-            char c = symbol[i];
-            next = current->get(c);
-            if (next != nullptr) {
-                parent = current;
-                current = next;
-                ++i;
-                continue;
-            }
-            IdStoreNode* newChild = makeChain(id, symbol, i);
-            if (current->addChild(symbol[i], newChild)) {
-                return id;
-            } else {
-                delete newChild;
-            }
-        }
-        // A matching node is found - either it's a leaf and we return the existing id
-        // Or it's not and we insert the id
-        if ((*current->children).empty()) {
-            return current->id;
-        }
-        auto cId = current->id.load();
-        // Found a matching node. Now we either retur the id or set it
-        if (cId > 0) {
-            return cId;
-        }
-        // If the id is 0 update it
-        current->id.compare_exchange_strong(cId, id);
-        return current->id;
+        return insert(nearest.second, nearest.first, id, symbol);
     }
-    IdStoreNode* makeChain(std::size_t id, std::string symbol, std::size_t index) {
-        IdStoreNode* root = new IdStoreNode();
-        if (index < symbol.size()) {
-            (*root->children)[symbol[index]].store(makeChain(id, symbol, index + 1));
-        } else {
-            root->id = id;
-        }
-        return root;
+
+    IdStore& operator=(const IdStore& other) {
+        delete root.load();
+        root.store(other.root.load()->clone());
+        return *this;
     }
+
+private:
+    std::atomic<Node*> root = new Node(0);
 };
 
 /**
@@ -247,39 +316,34 @@ public:
 class SymbolTable {
 private:
     /** A lock to synchronize parallel accesses */
-    mutable Lock access;
+    mutable std::mutex access;
 
     /** Map indices to strings. */
     SymbolStore numToStr;
 
     /** Map strings to indices. */
-    std::unordered_map<std::string, size_t> strToNum;
+    IdStore strToNum;
 
     /** Convenience method to place a new symbol in the table, if it does not exist, and return the index
      * of it. */
-    inline size_t newSymbolOfIndex(const std::string& symbol) {
-        size_t index;
-        auto it = strToNum.find(symbol);
-        if (it == strToNum.end()) {
-            index = numToStr.insert(symbol);
-            strToNum[symbol] = index;
-        } else {
-            index = it->second;
+    inline size_t newSymbol(const std::string& symbol) {
+        if (symbol.empty()) {
+            return 0;
         }
-        return index;
-    }
-
-    /** Convenience method to place a new symbol in the table, if it does not exist. */
-    inline void newSymbol(const std::string& symbol) {
-        if (strToNum.find(symbol) == strToNum.end()) {
-            std::size_t index = numToStr.insert(symbol);
-            strToNum[symbol] = index;
+        auto containsPair = strToNum.get(symbol);
+        if (containsPair.first == 2 * symbol.size() && containsPair.second->id != 0) {
+            return containsPair.second->id;
         }
+        std::size_t id = numToStr.insert(symbol);
+        return strToNum.insert(containsPair.second, containsPair.first, id, symbol);
     }
 
 public:
     /** Empty constructor. */
-    SymbolTable() = default;
+    SymbolTable() {
+        std::size_t index = numToStr.insert("");
+        strToNum.insert(index, "");
+    }
 
     /** Copy constructor, performs a deep copy. */
     SymbolTable(const SymbolTable& other) {
@@ -290,6 +354,8 @@ public:
     }
 
     SymbolTable(std::initializer_list<std::string> symbols) {
+        std::size_t index = numToStr.insert("");
+        strToNum.insert(index, "");
         for (const auto& symbol : symbols) {
             newSymbol(symbol);
         }
@@ -307,26 +373,18 @@ public:
     /** Find the index of a symbol in the table, inserting a new symbol if it does not exist there
      * already. */
     RamDomain lookup(const std::string& symbol) {
-        auto lease = access.acquire();
-        (void)lease;  // avoid warning;
-        return static_cast<RamDomain>(newSymbolOfIndex(symbol));
+        return static_cast<RamDomain>(newSymbol(symbol));
     }
 
     /** Finds the index of a symbol in the table, giving an error if it's not found */
     RamDomain lookupExisting(const std::string& symbol) const {
-        auto lease = access.acquire();
-        (void)lease;  // avoid warning;
-        auto result = strToNum.find(symbol);
-        if (result == strToNum.end()) {
-            fatal("Error string not found in call to `SymbolTable::lookupExisting`: `%s`", symbol);
-        }
-        return static_cast<RamDomain>(result->second);
+        return static_cast<RamDomain>(strToNum.getId(symbol));
     }
 
     /** Find the index of a symbol in the table, inserting a new symbol if it does not exist there
      * already. */
     RamDomain unsafeLookup(const std::string& symbol) {
-        return newSymbolOfIndex(symbol);
+        return static_cast<RamDomain>(newSymbol(symbol));
     }
 
     /** Find a symbol in the table by its index, note that this gives an error if the index is out of
@@ -349,8 +407,6 @@ public:
      * inserts
      * of single symbols. */
     void insert(const std::vector<std::string>& symbols) {
-        auto lease = access.acquire();
-        (void)lease;  // avoid warning;
         for (auto& symbol : symbols) {
             newSymbol(symbol);
         }
@@ -360,32 +416,19 @@ public:
      * symbols
      * in bulk. */
     void insert(const std::string& symbol) {
-        auto lease = access.acquire();
-        (void)lease;  // avoid warning;
         newSymbol(symbol);
     }
 
     /** Print the symbol table to the given stream. */
     void print(std::ostream& out) const {
         out << "SymbolTable: {\n\t";
-        out << join(strToNum, "\n\t",
-                       [](std::ostream& out, const std::pair<std::string, std::size_t>& entry) {
-                           out << entry.first << "\t => " << entry.second;
-                       })
-            << "\n";
+        out << join(numToStr);
         out << "}\n";
     }
 
     /** Check if the symbol table contains a string */
     bool contains(const std::string& symbol) const {
-        auto lease = access.acquire();
-        (void)lease;  // avoid warning;
-        auto result = strToNum.find(symbol);
-        if (result == strToNum.end()) {
-            return false;
-        } else {
-            return true;
-        }
+        return strToNum.contains(symbol);
     }
 
     /** Check if the symbol table contains an index */
@@ -393,8 +436,8 @@ public:
         return static_cast<std::size_t>(index) < size();
     }
 
-    Lock::Lease acquireLock() const {
-        return access.acquire();
+    std::lock_guard<std::mutex> acquireLock() const {
+        return std::lock_guard<std::mutex>(access);
     }
 
     /** Stream operator, used as a convenience for print. */

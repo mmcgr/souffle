@@ -26,85 +26,84 @@
 
 namespace souffle::test {
 
-TEST(SymbolTable, Basics) {
-    SymbolTable table;
+// TEST(SymbolTable, Basics) {
+//    SymbolTable table;
+//
+//    table.insert("Hello");
+//
+//    EXPECT_STREQ("Hello", table.resolve(table.lookup(table.resolve(table.lookup("Hello")))));
+//
+//    EXPECT_EQ(table.lookup("Hello"), table.lookup(table.resolve(table.lookup("Hello"))));
+//
+//    EXPECT_STREQ("Hello", table.resolve(table.lookup(table.resolve(table.lookup("Hello")))));
+//
+//    EXPECT_EQ(table.lookup("Hello"),
+//            table.lookup(table.resolve(table.lookup(table.resolve(table.lookup("Hello"))))));
+//}
+//
+// TEST(SymbolTable, Copy) {
+//    auto* a = new SymbolTable();
+//    a->insert("Hello");
+//
+//    auto* b = new SymbolTable(*a);
+//
+//    size_t a_idx = a->lookup("Hello");
+//    size_t b_idx = b->lookup("Hello");
+//
+//    // hash should be the same
+//    EXPECT_EQ(a_idx, b_idx);
+//
+//    EXPECT_STREQ("Hello", a->resolve(a_idx));
+//    EXPECT_STREQ("Hello", b->resolve(b_idx));
+//
+//    // should be the same actual string
+//    EXPECT_STREQ(a->resolve(a_idx), b->resolve(b_idx));
+//
+//    // b should survive
+//    delete a;
+//    EXPECT_STREQ("Hello", b->resolve(b_idx));
+//
+//    delete b;
+//}
+//
+// TEST(SymbolTable, Assign) {
+//    auto* a = new SymbolTable();
+//    a->insert("Hello");
+//
+//    SymbolTable b = *a;
+//    SymbolTable c;
+//
+//    c = *a;
+//
+//    size_t a_idx = a->lookup("Hello");
+//    size_t b_idx = b.lookup("Hello");
+//    size_t c_idx = c.lookup("Hello");
+//
+//    // hash should be the same
+//    EXPECT_EQ(a_idx, b_idx);
+//    EXPECT_EQ(b_idx, c_idx);
+//
+//    EXPECT_STREQ("Hello", a->resolve(a_idx));
+//    EXPECT_STREQ("Hello", b.resolve(b_idx));
+//    EXPECT_STREQ("Hello", c.resolve(c_idx));
+//
+//    // b and c should survive
+//    delete a;
+//    EXPECT_STREQ("Hello", b.resolve(b_idx));
+//    EXPECT_STREQ("Hello", c.resolve(c_idx));
+//}
 
-    table.insert("Hello");
-
-    EXPECT_STREQ("Hello", table.resolve(table.lookup(table.resolve(table.lookup("Hello")))));
-
-    EXPECT_EQ(table.lookup("Hello"), table.lookup(table.resolve(table.lookup("Hello"))));
-
-    EXPECT_STREQ("Hello", table.resolve(table.lookup(table.resolve(table.lookup("Hello")))));
-
-    EXPECT_EQ(table.lookup("Hello"),
-            table.lookup(table.resolve(table.lookup(table.resolve(table.lookup("Hello"))))));
-}
-
-TEST(SymbolTable, Copy) {
-    auto* a = new SymbolTable();
-    a->insert("Hello");
-
-    auto* b = new SymbolTable(*a);
-
-    size_t a_idx = a->lookup("Hello");
-    size_t b_idx = b->lookup("Hello");
-
-    // hash should be the same
-    EXPECT_EQ(a_idx, b_idx);
-
-    EXPECT_STREQ("Hello", a->resolve(a_idx));
-    EXPECT_STREQ("Hello", b->resolve(b_idx));
-
-    // should be the same actual string
-    EXPECT_STREQ(a->resolve(a_idx), b->resolve(b_idx));
-
-    // b should survive
-    delete a;
-    EXPECT_STREQ("Hello", b->resolve(b_idx));
-
-    delete b;
-}
-
-TEST(SymbolTable, Assign) {
-    auto* a = new SymbolTable();
-    a->insert("Hello");
-
-    SymbolTable b = *a;
-    SymbolTable c;
-
-    c = *a;
-
-    size_t a_idx = a->lookup("Hello");
-    size_t b_idx = b.lookup("Hello");
-    size_t c_idx = c.lookup("Hello");
-
-    // hash should be the same
-    EXPECT_EQ(a_idx, b_idx);
-    EXPECT_EQ(b_idx, c_idx);
-
-    EXPECT_STREQ("Hello", a->resolve(a_idx));
-    EXPECT_STREQ("Hello", b.resolve(b_idx));
-    EXPECT_STREQ("Hello", c.resolve(c_idx));
-
-    // b and c should survive
-    delete a;
-    EXPECT_STREQ("Hello", b.resolve(b_idx));
-    EXPECT_STREQ("Hello", c.resolve(c_idx));
-}
-
-TEST(SymbolTable, Inserts) {
+TEST(SymbolTable, Inserts1) {
     // whether to print the recorded times to stdout
     // should be false unless developing
-    const bool ECHO_TIME = false;
+    const bool ECHO_TIME = true;
 
     // type for very big number
     using T = unsigned long long;
-    time_point start;
-    time_point end;
+    time_point start, end;
 
-    T n = 0;        // counter
-    T N = 1000000;  // number of symbols to insert
+    T n = 0;         // counter
+    T N = 10000000;  // number of symbols to insert
     // T N = 10000000;   // larger tables for debugging/timing
     // T N = 100000000;  // larger tables for debugging/timing
 
@@ -114,6 +113,9 @@ TEST(SymbolTable, Inserts) {
     std::vector<std::string> A;
     A.reserve(N);
 
+    if (ECHO_TIME) {
+        std::cout << "Testing with strings of form <1234string>" << std::endl;
+    }
     for (T i = 0; i < N; ++i) {
         x = std::to_string(i) + "string";
         A.push_back(x);
@@ -123,20 +125,223 @@ TEST(SymbolTable, Inserts) {
         X.insert(A[i]);  // insert one at a time
     }
     end = now();
-    n = duration_in_ns(start, end);  // record the time
+    n = duration_in_us(start, end);  // record the time
 
     if (ECHO_TIME) {
-        std::cout << "Time to insert " << N << " new elements:      " << n << " ns" << std::endl;
+        std::cout << "Time to insert " << N << " new elements:      " << n << " us" << std::endl;
     }
 
     // try inserting all the elements that were just inserted
     start = now();
     X.insert(A);
     end = now();
-    n = duration_in_ns(start, end);
+    n = duration_in_us(start, end);
 
     if (ECHO_TIME) {
-        std::cout << "Time to insert " << N << " existing elements: " << n << " ns" << std::endl;
+        std::cout << "Time to insert " << N << " existing elements: " << n << " us" << std::endl;
+    }
+}
+
+TEST(SymbolTable, Inserts2) {
+    // whether to print the recorded times to stdout
+    // should be false unless developing
+    const bool ECHO_TIME = true;
+
+    // type for very big number
+    using T = unsigned long long;
+    time_point start, end;
+
+    T n = 0;         // counter
+    T N = 10000000;  // number of symbols to insert
+    // T N = 10000000;   // larger tables for debugging/timing
+    // T N = 100000000;  // larger tables for debugging/timing
+
+    SymbolTable X;
+    std::string x;
+
+    std::vector<std::string> A;
+    A.reserve(N);
+
+    if (ECHO_TIME) {
+        std::cout << "Testing with strings of form <long string to get things started:1234>" << std::endl;
+    }
+    for (T i = 0; i < N; ++i) {
+        x = "long string to get things started:" + std::to_string(i);
+        A.push_back(x);
+    }
+    start = now();
+    for (T i = 0; i < N; ++i) {
+        X.insert(A[i]);  // insert one at a time
+    }
+    end = now();
+    n = duration_in_us(start, end);  // record the time
+
+    if (ECHO_TIME) {
+        std::cout << "Time to insert " << N << " new elements:      " << n << " us" << std::endl;
+    }
+
+    // try inserting all the elements that were just inserted
+    start = now();
+    X.insert(A);
+    end = now();
+    n = duration_in_us(start, end);
+
+    if (ECHO_TIME) {
+        std::cout << "Time to insert " << N << " existing elements: " << n << " us" << std::endl;
+    }
+}
+
+TEST(SymbolTable, Inserts3) {
+    // whether to print the recorded times to stdout
+    // should be false unless developing
+    const bool ECHO_TIME = true;
+
+    // type for very big number
+    using T = unsigned long long;
+    time_point start, end;
+
+    T n = 0;         // counter
+    T N = 10000000;  // number of symbols to insert
+    // T N = 10000000;   // larger tables for debugging/timing
+    // T N = 100000000;  // larger tables for debugging/timing
+
+    SymbolTable X;
+    std::string x;
+
+    std::vector<std::string> A;
+    A.reserve(N);
+
+    if (ECHO_TIME) {
+        std::cout << "Testing with strings of form <1234:long string to get things started>" << std::endl;
+    }
+    for (T i = 0; i < N; ++i) {
+        x = std::to_string(i) + "long string to get things started:";
+        A.push_back(x);
+    }
+    start = now();
+    for (T i = 0; i < N; ++i) {
+        X.insert(A[i]);  // insert one at a time
+    }
+    end = now();
+    n = duration_in_us(start, end);  // record the time
+
+    if (ECHO_TIME) {
+        std::cout << "Time to insert " << N << " new elements:      " << n << " us" << std::endl;
+    }
+
+    // try inserting all the elements that were just inserted
+    start = now();
+    X.insert(A);
+    end = now();
+    n = duration_in_us(start, end);
+
+    if (ECHO_TIME) {
+        std::cout << "Time to insert " << N << " existing elements: " << n << " us" << std::endl;
+    }
+}
+
+TEST(SymbolTable, Inserts4) {
+    // whether to print the recorded times to stdout
+    // should be false unless developing
+    const bool ECHO_TIME = true;
+
+    // type for very big number
+    using T = unsigned long long;
+    time_point start;
+    time_point end;
+
+    T n = 0;         // counter
+    T N = 10000000;  // number of symbols to insert
+    // T N = 10000000;   // larger tables for debugging/timing
+    // T N = 100000000;  // larger tables for debugging/timing
+
+    SymbolTable X;
+    std::string x;
+
+    std::vector<std::string> A;
+    A.reserve(N);
+
+    if (ECHO_TIME) {
+        std::cout << "Testing with strings of form <1234>" << std::endl;
+    }
+    for (T i = 0; i < N; ++i) {
+        x = std::to_string(i);
+        A.push_back(x);
+    }
+    start = now();
+    for (T i = 0; i < N; ++i) {
+        X.insert(A[i]);  // insert one at a time
+    }
+    end = now();
+    n = duration_in_us(start, end);  // record the time
+
+    if (ECHO_TIME) {
+        std::cout << "Time to insert " << N << " new elements:      " << n << " us" << std::endl;
+    }
+
+    // try inserting all the elements that were just inserted
+    start = now();
+    X.insert(A);
+    end = now();
+    n = duration_in_us(start, end);
+
+    if (ECHO_TIME) {
+        std::cout << "Time to insert " << N << " existing elements: " << n << " us" << std::endl;
+    }
+}
+
+TEST(SymbolTable, Inserts5) {
+    // whether to print the recorded times to stdout
+    // should be false unless developing
+    const bool ECHO_TIME = true;
+
+    // type for very big number
+    using T = unsigned long long;
+    time_point start, end;
+
+    T n = 0;         // counter
+    T N = 10000000;  // number of symbols to insert
+    // T N = 10000000;   // larger tables for debugging/timing
+    // T N = 100000000;  // larger tables for debugging/timing
+
+    SymbolTable X;
+    std::string x;
+
+    std::vector<std::string> A;
+    A.reserve(N);
+
+    if (ECHO_TIME) {
+        std::cout << "Testing with strings of form <\\1\\2\\3\\4>" << std::endl;
+    }
+    A.push_back("\0");
+    for (T i = 1; i < N; ++i) {
+        T j = i;
+        x = "";
+        while (j > 0) {
+            x += (uint8_t)(j % 256);
+            j /= 256;
+        }
+        A.push_back(x);
+    }
+    start = now();
+    for (T i = 0; i < N; ++i) {
+        X.insert(A[i]);  // insert one at a time
+    }
+    end = now();
+    n = duration_in_us(start, end);  // record the time
+
+    if (ECHO_TIME) {
+        std::cout << "Time to insert " << N << " new elements:      " << n << " us" << std::endl;
+    }
+
+    // try inserting all the elements that were just inserted
+    start = now();
+    X.insert(A);
+    end = now();
+    n = duration_in_us(start, end);
+
+    if (ECHO_TIME) {
+        std::cout << "Time to insert " << N << " existing elements: " << n << " us" << std::endl;
     }
 }
 

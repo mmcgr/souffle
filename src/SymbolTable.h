@@ -78,8 +78,8 @@ public:
 
     std::size_t getNextId() {
         std::size_t result = currentSize++;
-        while (symbolBlocks[result / BLOCK_SIZE] == nullptr) {
-            std::string* oldArray = symbolBlocks[result / BLOCK_SIZE].load();
+        while (symbolBlocks[result / BLOCK_SIZE].load(std::memory_order_relaxed) == nullptr) {
+            std::string* oldArray = symbolBlocks[result / BLOCK_SIZE].load(std::memory_order_relaxed);
             if (oldArray != nullptr) {
                 break;
             }
@@ -99,7 +99,7 @@ public:
 
     const std::string& operator[](std::size_t id) const {
         // assert(id < currentSize && "Index out of bounds");
-        return symbolBlocks[id / BLOCK_SIZE][id % BLOCK_SIZE];
+        return symbolBlocks[id / BLOCK_SIZE].load(std::memory_order_relaxed)[id % BLOCK_SIZE];
     }
 
     std::size_t size() const {
@@ -114,11 +114,7 @@ public:
         }
     }
 
-    SymbolStore() {
-        for (std::size_t i = 0; i < BLOCK_SIZE; ++i) {
-            symbolBlocks[i].store(nullptr);
-        }
-    }
+    SymbolStore() = default;
 
     SymbolStore(const SymbolStore& other) {
         for (std::size_t i = 0; i < BLOCK_SIZE; ++i) {
@@ -142,12 +138,14 @@ public:
     }
 
 private:
-    std::unique_ptr<std::atomic<std::string*>[]> symbolBlocks { new std::atomic<std::string*>[ BLOCK_SIZE ] };
+    std::unique_ptr<std::atomic<std::string*>[]> symbolBlocks {
+        new std::atomic<std::string*>[BLOCK_SIZE] {}
+    };
     std::atomic<std::size_t> currentSize{0};
 
     void insert(std::size_t id, std::string symbol) {
-        assert(id <= currentSize && "Index out of bounds");
-        symbolBlocks[id / BLOCK_SIZE][id % BLOCK_SIZE] = symbol;
+        // assert(id <= currentSize && "Index out of bounds");
+        symbolBlocks[id / BLOCK_SIZE].load(std::memory_order_relaxed)[id % BLOCK_SIZE] = symbol;
     }
 };
 
@@ -175,14 +173,15 @@ public:
                 return {index, this};
             }
             uint8_t nibble = getNibble(index, symbol);
-            if (children[nibble] == nullptr) {
+            auto* child = children[nibble].load(std::memory_order_relaxed);
+            if (child == nullptr) {
                 return {index, this};
             }
-            return children[nibble].load()->get(index + 1, symbol);
+            return child->get(index + 1, symbol);
         }
         bool addChild(uint8_t c, Node* node) {
             //	assert(c < TRIE_WIDTH && "out of bounds");
-            Node* oldNode = children[c];
+            Node* oldNode = children[c].load(std::memory_order_relaxed);
             if (oldNode != nullptr) {
                 return false;
             }
@@ -207,7 +206,7 @@ public:
                 if (child == nullptr) {
                     continue;
                 }
-                clone->children[i].store(children[i].load()->clone());
+                clone->children[i].store(child->clone());
             }
             return clone;
         }
@@ -218,19 +217,6 @@ public:
 
     std::pair<std::size_t, Node*> get(const std::string& symbol) const {
         return root.load()->get(0, symbol);
-    }
-
-    std::pair<std::size_t, Node*> getNearest(const std::string& symbol) {
-        Node* current = root;
-        std::size_t i = 0;
-        for (; i < 2 * symbol.size(); ++i) {
-            uint8_t c = Node::getNibble(i, symbol);
-            if (current->children[c] == nullptr) {
-                break;
-            }
-            current = current->children[c];
-        }
-        return {i, current};
     }
 
     std::size_t getId(const std::string& symbol) const {

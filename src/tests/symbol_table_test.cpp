@@ -114,7 +114,7 @@ TEST(SymbolTable, Inserts1) {
     A.reserve(N);
 
     if (ECHO_TIME) {
-        std::cout << "Testing with strings of form <1234string>" << std::endl;
+        std::cout << "Testing with " << N << " strings of form <1234string>" << std::endl;
     }
     for (T i = 0; i < N; ++i) {
         x = std::to_string(i) + "string";
@@ -128,7 +128,7 @@ TEST(SymbolTable, Inserts1) {
     n = duration_in_us(start, end);  // record the time
 
     if (ECHO_TIME) {
-        std::cout << "Time to insert " << N << " new elements:      " << n << " us" << std::endl;
+        std::cout << "Inserting new elements:      " << n << " us" << std::endl;
     }
 
     // try inserting all the elements that were just inserted
@@ -138,7 +138,7 @@ TEST(SymbolTable, Inserts1) {
     n = duration_in_us(start, end);
 
     if (ECHO_TIME) {
-        std::cout << "Time to insert " << N << " existing elements: " << n << " us" << std::endl;
+        std::cout << "Inserting existing elements: " << n << " us" << std::endl;
     }
 }
 
@@ -163,7 +163,7 @@ TEST(SymbolTable, Inserts2) {
     A.reserve(N);
 
     if (ECHO_TIME) {
-        std::cout << "Testing with strings of form <long string to get things started:1234>" << std::endl;
+        std::cout << "Testing with " << N << " strings of form <long string to get things started:1234>" << std::endl;
     }
     for (T i = 0; i < N; ++i) {
         x = "long string to get things started:" + std::to_string(i);
@@ -177,7 +177,7 @@ TEST(SymbolTable, Inserts2) {
     n = duration_in_us(start, end);  // record the time
 
     if (ECHO_TIME) {
-        std::cout << "Time to insert " << N << " new elements:      " << n << " us" << std::endl;
+        std::cout << "Inserting new elements:      " << n << " us" << std::endl;
     }
 
     // try inserting all the elements that were just inserted
@@ -187,7 +187,7 @@ TEST(SymbolTable, Inserts2) {
     n = duration_in_us(start, end);
 
     if (ECHO_TIME) {
-        std::cout << "Time to insert " << N << " existing elements: " << n << " us" << std::endl;
+        std::cout << "Inserting existing elements: " << n << " us" << std::endl;
     }
 }
 
@@ -212,7 +212,7 @@ TEST(SymbolTable, Inserts3) {
     A.reserve(N);
 
     if (ECHO_TIME) {
-        std::cout << "Testing with strings of form <1234:long string to get things started>" << std::endl;
+        std::cout << "Testing with " << N << " strings of form <1234:long string to get things started>" << std::endl;
     }
     for (T i = 0; i < N; ++i) {
         x = std::to_string(i) + "long string to get things started:";
@@ -226,7 +226,7 @@ TEST(SymbolTable, Inserts3) {
     n = duration_in_us(start, end);  // record the time
 
     if (ECHO_TIME) {
-        std::cout << "Time to insert " << N << " new elements:      " << n << " us" << std::endl;
+        std::cout << "Inserting new elements:      " << n << " us" << std::endl;
     }
 
     // try inserting all the elements that were just inserted
@@ -236,7 +236,7 @@ TEST(SymbolTable, Inserts3) {
     n = duration_in_us(start, end);
 
     if (ECHO_TIME) {
-        std::cout << "Time to insert " << N << " existing elements: " << n << " us" << std::endl;
+        std::cout << "Inserting existing elements: " << n << " us" << std::endl;
     }
 }
 
@@ -262,7 +262,7 @@ TEST(SymbolTable, Inserts4) {
     A.reserve(N);
 
     if (ECHO_TIME) {
-        std::cout << "Testing with strings of form <1234>" << std::endl;
+        std::cout << "Testing with " << N << " strings of form <1234>" << std::endl;
     }
     for (T i = 0; i < N; ++i) {
         x = std::to_string(i);
@@ -276,7 +276,7 @@ TEST(SymbolTable, Inserts4) {
     n = duration_in_us(start, end);  // record the time
 
     if (ECHO_TIME) {
-        std::cout << "Time to insert " << N << " new elements:      " << n << " us" << std::endl;
+        std::cout << "Inserting new elements:      " << n << " us" << std::endl;
     }
 
     // try inserting all the elements that were just inserted
@@ -286,7 +286,7 @@ TEST(SymbolTable, Inserts4) {
     n = duration_in_us(start, end);
 
     if (ECHO_TIME) {
-        std::cout << "Time to insert " << N << " existing elements: " << n << " us" << std::endl;
+        std::cout << "Inserting existing elements: " << n << " us" << std::endl;
     }
 }
 
@@ -311,7 +311,7 @@ TEST(SymbolTable, Inserts5) {
     A.reserve(N);
 
     if (ECHO_TIME) {
-        std::cout << "Testing with strings of form <\\1\\2\\3\\4>" << std::endl;
+        std::cout << "Testing with " << N << " strings of form <\\1\\2\\3\\4>" << std::endl;
     }
     A.push_back("\0");
     for (T i = 1; i < N; ++i) {
@@ -331,7 +331,7 @@ TEST(SymbolTable, Inserts5) {
     n = duration_in_us(start, end);  // record the time
 
     if (ECHO_TIME) {
-        std::cout << "Time to insert " << N << " new elements:      " << n << " us" << std::endl;
+        std::cout << "Inserting new elements:      " << n << " us" << std::endl;
     }
 
     // try inserting all the elements that were just inserted
@@ -341,8 +341,65 @@ TEST(SymbolTable, Inserts5) {
     n = duration_in_us(start, end);
 
     if (ECHO_TIME) {
-        std::cout << "Time to insert " << N << " existing elements: " << n << " us" << std::endl;
+        std::cout << "Inserting existing elements: " << n << " us" << std::endl;
     }
+}
+
+TEST(SymbolTable, InsertsParallel) {
+    // whether to print the recorded times to stdout
+    // should be false unless developing
+    const bool ECHO_TIME = true;
+
+    // type for very big number
+    using T = unsigned long long;
+    time_point start, end;
+
+    T n = 0;         // counter
+    T N = 10000000;  // number of symbols to insert
+    // T N = 10000000;   // larger tables for debugging/timing
+    // T N = 100000000;  // larger tables for debugging/timing
+
+    SymbolTable X;
+    std::string x;
+
+    std::vector<std::string> A;
+    A.reserve(N);
+    A.push_back("");
+
+    if (ECHO_TIME) {
+        std::cout << "Testing with " << N << " strings of form <1234> in parallel" << std::endl;
+    }
+    for (T i = 0; i < N; ++i) {
+        x = std::to_string(i);
+        A.push_back(x);
+    }
+    start = now();
+
+#pragma omp parallel for  //  schedule(static,1)
+        for (auto it = A.begin(); it < A.end(); ++it) {
+            X.insert(*it);
+        }
+    end = now();
+    n = duration_in_us(start, end);  // record the time
+
+    if (ECHO_TIME) {
+        std::cout << "Inserting new elements:      " << n << " us" << std::endl;
+    }
+    EXPECT_EQ(A.size(), X.size());
+
+    // try inserting all the elements that were just inserted
+    start = now();
+#pragma omp parallel for  //  schedule(static,1)
+        for (auto it = A.begin(); it < A.end(); ++it) {
+            X.insert(*it);
+        }
+    end = now();
+    n = duration_in_us(start, end);
+
+    if (ECHO_TIME) {
+        std::cout << "Inserting existing elements: " << n << " us" << std::endl;
+    }
+    EXPECT_EQ(A.size(), X.size());
 }
 
 }  // namespace souffle::test

@@ -237,37 +237,35 @@ public:
     }
 
     std::size_t insert(Node* node, std::size_t index, std::size_t id, const std::string& symbol) {
-        // We may be updating the current node with an id, so check this first
-        if (index == 2 * symbol.size()) {
-            std::size_t oldId = node->id;
-            while (oldId == 0) {
-                node->id.compare_exchange_strong(oldId, id);
-                oldId = node->id;
-            }
-            return node->id;
-        }
-        // Add a new child
-        ++index;
-        Node* newChild = new Node(index == 2 * symbol.size() ? id : 0);
-        uint8_t nibble = Node::getNibble(index - 1, symbol);
-        if (node->addChild(nibble, newChild)) {
+        while (true) {
+            // We may be updating the current node with an id, so check this first
             if (index == 2 * symbol.size()) {
-                return newChild->id;
+                std::size_t oldId = node->id;
+                while (oldId == 0) {
+                    node->id.compare_exchange_strong(oldId, id);
+                    oldId = node->id;
+                }
+                return node->id;
             }
-            return insert(newChild, index, id, symbol);
+
+            uint8_t nibble = Node::getNibble(index, symbol);
+            // Add a new child
+            ++index;
+            Node* newChild = new Node(index == 2 * symbol.size() ? id : 0);
+            if (node->addChild(nibble, newChild)) {
+                if (index == 2 * symbol.size()) {
+                    return newChild->id;
+                }
+                return insert(newChild, index, id, symbol);
+            }
+            // Something went wrong, probably another node already inserted
+            // Clean up
+            delete newChild;
+            --index;
+
+            // Recheck for nearest node
+            std::tie(index, node) = node->get(index, symbol);
         }
-        // Something went wrong, probably another node already inserted
-        // Clean up
-        delete newChild;
-        --index;
-        // Search again from the current node
-        auto resultPair = node->get(index, symbol);
-        // If the symbol has been inserted then we can return the new id
-        if (resultPair.first == 2 * symbol.size() && resultPair.second->id > 0) {
-            return resultPair.second->id;
-        }
-        // Let's try again
-        return insert(node, index, id, symbol);
     }
 
     std::size_t insert(std::size_t id, const std::string& symbol) {

@@ -34,6 +34,10 @@ AC_CONFIG_HEADERS([src/config.h])
 AC_CONFIG_MACRO_DIRS([m4])
 AC_CONFIG_MACRO_DIR([m4])
 
+AS_IF([test "x$enable_host_packaging" = "xyes"], [SOUFFLE_PACKAGING=1],
+  [test "x$enable_host_packaging" != "xyes"], [unset SOUFFLE_PACKAGING]
+)
+
 if test -n "$SOUFFLE_PACKAGING"; then
   case $host_os in
     darwin* )
@@ -159,10 +163,6 @@ AC_ARG_ENABLE(
   [host-packaging],
   AS_HELP_STRING([--enable-host-packaging], [Enable packaging using a given distribution])
 )
-AS_IF([test "x$enable_host_packaging" = "xyes"], [SOUFFLE_PACKAGING=1],
-  [test "x$enable_host_packaging" != "xyes"], [unset SOUFFLE_PACKAGING]
-)
-
 # Disable libz
 AC_ARG_ENABLE(
   [libz],

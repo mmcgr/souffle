@@ -54,7 +54,12 @@ public:
 
     /** add key-value pair */
     void addKVP(const std::string& key, const std::string& value) {
-        kvps[key] = unescape(value);
+        kvps[key] = value;
+    }
+
+    /** add key-value pair */
+    void setDirectives(std::map<std::string, std::string> ioMap) {
+        kvps = ioMap;
     }
 
     /** get I/O-directive map */

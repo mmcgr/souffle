@@ -15,6 +15,7 @@
 #pragma once
 
 #include <map>
+#include <regex>
 #include <sstream>
 #include <string>
 
@@ -47,8 +48,17 @@ public:
         return directives.at(key);
     }
 
+    const std::map<std::string, std::string>& getMap() const {
+        return directives;
+    }
+
     void set(const std::string& key, const std::string& value) {
         directives[key] = value;
+    }
+
+    /** Basic conversion of escaped input (\", \t, \r, \n) */
+    void cleanAndSet(const std::string& key, const std::string& value) {
+        directives[key] = unescape(value);
     }
 
     bool has(const std::string& key) const {
@@ -103,23 +113,20 @@ public:
     }
 
 private:
-    std::string escape(const std::string& inputString) const {
-        std::string escaped = escape(inputString, "\"", "\\\"");
-        escaped = escape(escaped, "\t", "\\t");
-        escaped = escape(escaped, "\r", "\\r");
-        escaped = escape(escaped, "\n", "\\n");
-        return escaped;
+    std::string escape(std::string text) const {
+        text = std::regex_replace(text, std::regex("\""), "\\\"");
+        text = std::regex_replace(text, std::regex("\t"), "\\t");
+        text = std::regex_replace(text, std::regex("\r"), "\\r");
+        text = std::regex_replace(text, std::regex("\n"), "\\n");
+        return text;
     }
 
-    std::string escape(
-            const std::string& inputString, const std::string& needle, const std::string& replacement) const {
-        std::string result = inputString;
-        size_t pos = 0;
-        while ((pos = result.find(needle, pos)) != std::string::npos) {
-            result = result.replace(pos, needle.length(), replacement);
-            pos += replacement.length();
-        }
-        return result;
+    std::string unescape(std::string text) {
+        text = std::regex_replace(text, std::regex("\\\""), "\"");
+        text = std::regex_replace(text, std::regex("\\t"), "\t");
+        text = std::regex_replace(text, std::regex("\\r"), "\r");
+        text = std::regex_replace(text, std::regex("\\n"), "\n");
+        return text;
     }
 
     std::map<std::string, std::string> directives;

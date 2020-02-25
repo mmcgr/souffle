@@ -41,6 +41,7 @@
     #include "AstProgram.h"
     #include "BinaryConstraintOps.h"
     #include "FunctorOps.h"
+    #include "IODirectives.h"
     #include "RamTypes.h"
 
     using namespace souffle;
@@ -190,8 +191,7 @@
 %type <std::vector<AstAttribute *>>         non_empty_attributes
 %type <AstExecutionOrder *>                 non_empty_exec_order_list
 %type <std::vector<TypeAttribute>>          non_empty_functor_arg_type_list
-%type <std::vector<std::pair
-            <std::string, std::string>>>    non_empty_key_value_pairs
+%type <IODirectives>                        io_key_value_pairs
 %type <AstRecordType *>                     non_empty_record_type_list
 %type <AstPragma *>                         pragma
 %type <std::set<RelationTag>>               relation_tags
@@ -231,7 +231,7 @@
 %destructor { for (auto* cur : $$) { delete cur; } }        non_empty_attributes
 %destructor { delete $$; }                                  non_empty_exec_order_list
 %destructor { }                                             non_empty_functor_arg_type_list
-%destructor { }                                             non_empty_key_value_pairs
+%destructor { }                                             io_key_value_pairs
 %destructor { delete $$; }                                  non_empty_record_type_list
 %destructor { delete $$; }                                  pragma
 %destructor { }                                             relation_tags
@@ -1671,16 +1671,11 @@ io_directive_list
 
         $io_relation_list.clear();
     }
-  | io_relation_list LPAREN non_empty_key_value_pairs RPAREN {
+  | io_relation_list LPAREN io_key_value_pairs RPAREN {
         for (auto* io : $io_relation_list) {
-            for (const auto& kvp : $non_empty_key_value_pairs) {
-                io->addKVP(kvp.first, kvp.second);
-            }
+            io->setDirectives($io_key_value_pairs.getMap());
         }
         $$ = $io_relation_list;
-
-        $io_relation_list.clear();
-        $non_empty_key_value_pairs.clear();
     }
   ;
 
@@ -1709,15 +1704,13 @@ io_relation_list
   ;
 
 /* Key-value pairs */
-non_empty_key_value_pairs
+io_key_value_pairs
   : IDENT EQUALS kvp_value {
-        $$.push_back(std::make_pair($IDENT, $kvp_value));
+        $$.cleanAndSet($IDENT, $kvp_value);
     }
-  | non_empty_key_value_pairs[curr_io] COMMA IDENT EQUALS kvp_value {
+  | io_key_value_pairs[curr_io] COMMA IDENT EQUALS kvp_value {
         $$ = $curr_io;
-        $$.push_back(std::make_pair($IDENT, $kvp_value));
-
-        $curr_io.clear();
+        $$.cleanAndSet($IDENT, $kvp_value);
     }
   ;
 kvp_value

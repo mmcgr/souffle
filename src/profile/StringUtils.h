@@ -200,15 +200,6 @@ inline std::string trimWhitespace(std::string str) {
     return str;
 }
 
-inline bool file_exists(const std::string& name) {
-    struct stat buffer = {};
-    if (stat(name.c_str(), &buffer) == 0) {
-        if ((buffer.st_mode & S_IFMT) != 0) {
-            return true;
-        }
-    }
-    return false;
-}
 /** @brief Remove \n and \t characters, \n and \t sequence of two chars, and wrapping quotes */
 inline std::string cleanString(std::string val, std::string replacement = " ") {
     if (val.size() < 2) {
@@ -234,10 +225,10 @@ inline std::string cleanString(std::string val, std::string replacement = " ") {
     // Replace whitespace strings formerly containing \n or \t with a single space
     start_pos = 0;
     while ((start_pos = val.find('\t', start_pos)) != std::string::npos) {
-        auto firstWhitespace = start_pos;
-        auto lastWhitespace = start_pos;
+        size_t firstWhitespace = start_pos;
+        size_t lastWhitespace = start_pos;
 
-        while (firstWhitespace >= 0) {
+        while (true) {
             if (val[firstWhitespace] != '\t' && val[firstWhitespace] != ' ') {
                 ++firstWhitespace;
                 break;

@@ -82,9 +82,10 @@ public:
         } else if (args.count('j') != 0) {
             std::string outputPath = args['j'];
             if (args['j'] == "j") {
-                outputPath = "profiler_html/";
+                HtmlGenerator(filename).outputHtml();
+            } else {
+                HtmlGenerator(filename).outputHtml(outputPath);
             }
-            Tui(filename, false).outputHtml(outputPath);
 
         } else {
             Tui(filename, true).runProf();

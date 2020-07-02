@@ -179,6 +179,7 @@ public:
             }
             return child->get(index + 1, symbol);
         }
+
         bool addChild(uint8_t c, Node* node) {
             //	assert(c < TRIE_WIDTH && "out of bounds");
             Node* oldNode = children[c].load(std::memory_order_relaxed);
@@ -280,6 +281,17 @@ public:
         return insert(nearest.second, nearest.first, id, symbol);
     }
 
+    IdStore() = default;
+
+    IdStore(const IdStore& other) {
+        root.store(other.root.load()->clone());
+    }
+
+    IdStore(IdStore&& other) {
+        root.store(other.root.load());
+        other.root.store(nullptr);
+    }
+
     IdStore& operator=(const IdStore& other) {
         delete root.load();
         root.store(other.root.load()->clone());
@@ -331,10 +343,8 @@ public:
 
     /** Copy constructor, performs a deep copy. */
     SymbolTable(const SymbolTable& other) {
-        std::size_t size = other.size();
-        for (std::size_t i = 0; i < size; ++i) {
-            newSymbol(other.resolve(i));
-        }
+        numToStr = other.numToStr;
+        strToNum = other.strToNum;
     }
 
     SymbolTable(std::initializer_list<std::string> symbols) {

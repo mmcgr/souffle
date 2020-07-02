@@ -102,10 +102,10 @@ TEST(SymbolTable, Inserts1) {
     using T = unsigned long long;
     time_point start, end;
 
-    T n = 0;         // counter
-    T N = 10000000;  // number of symbols to insert
-    // T N = 10000000;   // larger tables for debugging/timing
-    // T N = 100000000;  // larger tables for debugging/timing
+    T n = 0;        // counter
+    T N = 1000000;  // number of symbols to insert
+    // T N = 1000000;   // larger tables for debugging/timing
+    // T N = 1000000;  // larger tables for debugging/timing
 
     SymbolTable X;
     std::string x;
@@ -151,10 +151,10 @@ TEST(SymbolTable, Inserts2) {
     using T = unsigned long long;
     time_point start, end;
 
-    T n = 0;         // counter
-    T N = 10000000;  // number of symbols to insert
-    // T N = 10000000;   // larger tables for debugging/timing
-    // T N = 100000000;  // larger tables for debugging/timing
+    T n = 0;        // counter
+    T N = 1000000;  // number of symbols to insert
+    // T N = 1000000;   // larger tables for debugging/timing
+    // T N = 1000000;  // larger tables for debugging/timing
 
     SymbolTable X;
     std::string x;
@@ -163,7 +163,8 @@ TEST(SymbolTable, Inserts2) {
     A.reserve(N);
 
     if (ECHO_TIME) {
-        std::cout << "Testing with " << N << " strings of form <long string to get things started:1234>" << std::endl;
+        std::cout << "Testing with " << N << " strings of form <long string to get things started:1234>"
+                  << std::endl;
     }
     for (T i = 0; i < N; ++i) {
         x = "long string to get things started:" + std::to_string(i);
@@ -200,10 +201,10 @@ TEST(SymbolTable, Inserts3) {
     using T = unsigned long long;
     time_point start, end;
 
-    T n = 0;         // counter
-    T N = 10000000;  // number of symbols to insert
-    // T N = 10000000;   // larger tables for debugging/timing
-    // T N = 100000000;  // larger tables for debugging/timing
+    T n = 0;       // counter
+    T N = 100000;  // number of symbols to insert
+    // T N = 1000000;   // larger tables for debugging/timing
+    // T N = 1000000;  // larger tables for debugging/timing
 
     SymbolTable X;
     std::string x;
@@ -212,7 +213,8 @@ TEST(SymbolTable, Inserts3) {
     A.reserve(N);
 
     if (ECHO_TIME) {
-        std::cout << "Testing with " << N << " strings of form <1234:long string to get things started>" << std::endl;
+        std::cout << "Testing with " << N << " strings of form <1234:long string to get things started>"
+                  << std::endl;
     }
     for (T i = 0; i < N; ++i) {
         x = std::to_string(i) + "long string to get things started:";
@@ -250,10 +252,10 @@ TEST(SymbolTable, Inserts4) {
     time_point start;
     time_point end;
 
-    T n = 0;         // counter
-    T N = 10000000;  // number of symbols to insert
-    // T N = 10000000;   // larger tables for debugging/timing
-    // T N = 100000000;  // larger tables for debugging/timing
+    T n = 0;        // counter
+    T N = 1000000;  // number of symbols to insert
+    // T N = 1000000;   // larger tables for debugging/timing
+    // T N = 1000000;  // larger tables for debugging/timing
 
     SymbolTable X;
     std::string x;
@@ -299,10 +301,10 @@ TEST(SymbolTable, Inserts5) {
     using T = unsigned long long;
     time_point start, end;
 
-    T n = 0;         // counter
-    T N = 10000000;  // number of symbols to insert
-    // T N = 10000000;   // larger tables for debugging/timing
-    // T N = 100000000;  // larger tables for debugging/timing
+    T n = 0;        // counter
+    T N = 1000000;  // number of symbols to insert
+    // T N = 1000000;   // larger tables for debugging/timing
+    // T N = 1000000;  // larger tables for debugging/timing
 
     SymbolTable X;
     std::string x;
@@ -354,10 +356,10 @@ TEST(SymbolTable, InsertsParallel) {
     using T = unsigned long long;
     time_point start, end;
 
-    T n = 0;         // counter
-    T N = 10000000;  // number of symbols to insert
-    // T N = 10000000;   // larger tables for debugging/timing
-    // T N = 100000000;  // larger tables for debugging/timing
+    T n = 0;        // counter
+    T N = 1000000;  // number of symbols to insert
+    // T N = 1000000;   // larger tables for debugging/timing
+    // T N = 1000000;  // larger tables for debugging/timing
 
     SymbolTable X;
     std::string x;
@@ -376,9 +378,9 @@ TEST(SymbolTable, InsertsParallel) {
     start = now();
 
 #pragma omp parallel for  //  schedule(static,1)
-        for (auto it = A.begin(); it < A.end(); ++it) {
-            X.insert(*it);
-        }
+    for (auto it = A.begin(); it < A.end(); ++it) {
+        X.insert(*it);
+    }
     end = now();
     n = duration_in_us(start, end);  // record the time
 
@@ -390,9 +392,9 @@ TEST(SymbolTable, InsertsParallel) {
     // try inserting all the elements that were just inserted
     start = now();
 #pragma omp parallel for  //  schedule(static,1)
-        for (auto it = A.begin(); it < A.end(); ++it) {
-            X.insert(*it);
-        }
+    for (auto it = A.begin(); it < A.end(); ++it) {
+        X.insert(*it);
+    }
     end = now();
     n = duration_in_us(start, end);
 

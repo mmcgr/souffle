@@ -242,7 +242,7 @@ public:
             // We may be updating the current node with an id, so check this first
             if (index == 2 * symbol.size()) {
                 std::size_t oldId = node->id;
-                while (oldId == 0) {
+                while (oldId == 0 && id != oldId) {
                     node->id.compare_exchange_strong(oldId, id);
                     oldId = node->id;
                 }
@@ -330,6 +330,11 @@ private:
         if (containsPair.first == 2 * symbol.size() && containsPair.second->id != 0) {
             return containsPair.second->id;
         }
+        // Insert placeholder
+        strToNum.insert(containsPair.second, containsPair.first, 0, symbol);
+
+        // Now try updating the placeholder
+        containsPair = strToNum.get(symbol);
         std::size_t id = numToStr.insert(symbol);
         return strToNum.insert(containsPair.second, containsPair.first, id, symbol);
     }

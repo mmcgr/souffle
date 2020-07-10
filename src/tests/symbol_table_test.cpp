@@ -130,6 +130,7 @@ TEST(SymbolTable, Inserts1) {
     if (ECHO_TIME) {
         std::cout << "Inserting new elements:      " << n << " us" << std::endl;
     }
+    EXPECT_EQ(A.size(), X.size());
 
     // try inserting all the elements that were just inserted
     start = now();
@@ -140,6 +141,7 @@ TEST(SymbolTable, Inserts1) {
     if (ECHO_TIME) {
         std::cout << "Inserting existing elements: " << n << " us" << std::endl;
     }
+    EXPECT_EQ(A.size(), X.size());
 }
 
 TEST(SymbolTable, Inserts2) {
@@ -180,6 +182,7 @@ TEST(SymbolTable, Inserts2) {
     if (ECHO_TIME) {
         std::cout << "Inserting new elements:      " << n << " us" << std::endl;
     }
+    EXPECT_EQ(A.size(), X.size());
 
     // try inserting all the elements that were just inserted
     start = now();
@@ -190,6 +193,7 @@ TEST(SymbolTable, Inserts2) {
     if (ECHO_TIME) {
         std::cout << "Inserting existing elements: " << n << " us" << std::endl;
     }
+    EXPECT_EQ(A.size(), X.size());
 }
 
 TEST(SymbolTable, Inserts3) {
@@ -230,6 +234,7 @@ TEST(SymbolTable, Inserts3) {
     if (ECHO_TIME) {
         std::cout << "Inserting new elements:      " << n << " us" << std::endl;
     }
+    EXPECT_EQ(A.size(), X.size());
 
     // try inserting all the elements that were just inserted
     start = now();
@@ -240,6 +245,7 @@ TEST(SymbolTable, Inserts3) {
     if (ECHO_TIME) {
         std::cout << "Inserting existing elements: " << n << " us" << std::endl;
     }
+    EXPECT_EQ(A.size(), X.size());
 }
 
 TEST(SymbolTable, Inserts4) {
@@ -280,6 +286,7 @@ TEST(SymbolTable, Inserts4) {
     if (ECHO_TIME) {
         std::cout << "Inserting new elements:      " << n << " us" << std::endl;
     }
+    EXPECT_EQ(A.size(), X.size());
 
     // try inserting all the elements that were just inserted
     start = now();
@@ -290,6 +297,7 @@ TEST(SymbolTable, Inserts4) {
     if (ECHO_TIME) {
         std::cout << "Inserting existing elements: " << n << " us" << std::endl;
     }
+    EXPECT_EQ(A.size(), X.size());
 }
 
 TEST(SymbolTable, Inserts5) {
@@ -335,6 +343,7 @@ TEST(SymbolTable, Inserts5) {
     if (ECHO_TIME) {
         std::cout << "Inserting new elements:      " << n << " us" << std::endl;
     }
+    EXPECT_EQ(A.size(), X.size());
 
     // try inserting all the elements that were just inserted
     start = now();
@@ -345,6 +354,7 @@ TEST(SymbolTable, Inserts5) {
     if (ECHO_TIME) {
         std::cout << "Inserting existing elements: " << n << " us" << std::endl;
     }
+    EXPECT_EQ(A.size(), X.size());
 }
 
 TEST(SymbolTable, InsertsParallel) {

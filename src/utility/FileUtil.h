@@ -19,6 +19,7 @@
 #include <climits>
 #include <cstdio>
 #include <cstdlib>
+#include <filesystem>
 #include <fstream>
 #include <sstream>
 #include <string>
@@ -41,15 +42,6 @@
 
 #define PATH_MAX 260
 
-/**
- * access and realpath are missing on windows, we use their windows equivalents
- * as work-arounds.
- */
-#define access _access
-inline char* realpath(const char* path, char* resolved_path) {
-    return _fullpath(resolved_path, path, PATH_MAX);
-}
-
 #endif
 
 namespace souffle {
@@ -58,33 +50,25 @@ namespace souffle {
  *  Check whether a file exists in the file system
  */
 inline bool existFile(const std::string& name) {
-    struct stat buffer = {};
-    if (stat(name.c_str(), &buffer) == 0) {
-        if ((buffer.st_mode & S_IFMT) != 0) {
-            return true;
-        }
-    }
-    return false;
+    return std::filesystem::exists(name);
 }
 
 /**
  *  Check whether a directory exists in the file system
  */
 inline bool existDir(const std::string& name) {
-    struct stat buffer = {};
-    if (stat(name.c_str(), &buffer) == 0) {
-        if ((buffer.st_mode & S_IFDIR) != 0) {
-            return true;
-        }
-    }
-    return false;
+    return std::filesystem::is_directory(name);
 }
 
 /**
  * Check whether a given file exists and it is an executable
  */
 inline bool isExecutable(const std::string& name) {
-    return existFile(name) && (access(name.c_str(), X_OK) == 0);
+    if (!existFile(name)) {
+        return false;
+    }
+    auto permissions = std::filesystem::status(name).permissions();
+    return (permissions & std::filesystem::perms::owner_exec) != std::filesystem::perms::none;
 }
 
 /**
@@ -100,7 +84,6 @@ inline std::string which(const std::string& name) {
     if (syspath == nullptr) {
         return "";
     }
-    char buf[PATH_MAX];
     std::stringstream sstr;
     sstr << syspath;
     std::string sub;
@@ -108,8 +91,8 @@ inline std::string which(const std::string& name) {
     // Check for existence of a binary called 'name' in PATH
     while (std::getline(sstr, sub, ':')) {
         std::string path = sub + "/" + name;
-        if ((::realpath(path.c_str(), buf) != nullptr) && isExecutable(path) && !existDir(path)) {
-            return buf;
+        if (isExecutable(path) && !existDir(path)) {
+            return std::filesystem::canonical(path);
         }
     }
     return "";

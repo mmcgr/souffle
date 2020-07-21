@@ -24,7 +24,6 @@
 #include <sstream>
 #include <string>
 #include <utility>
-#include <sys/stat.h>
 
 #ifndef _WIN32
 #include <unistd.h>
@@ -64,7 +63,7 @@ inline bool existDir(const std::string& name) {
  * Check whether a given file exists and it is an executable
  */
 inline bool isExecutable(const std::string& name) {
-    if (!existFile(name)) {
+    if (!std::filesystem::exists(name)) {
         return false;
     }
     auto permissions = std::filesystem::status(name).permissions();
@@ -91,7 +90,7 @@ inline std::string which(const std::string& name) {
     // Check for existence of a binary called 'name' in PATH
     while (std::getline(sstr, sub, ':')) {
         std::string path = sub + "/" + name;
-        if (isExecutable(path) && !existDir(path)) {
+        if (isExecutable(path) && !std::filesystem::is_directory(name)) {
             return std::filesystem::canonical(path);
         }
     }
@@ -122,30 +121,6 @@ inline std::string dirName(const std::string& name) {
     return name.substr(0, leadingSlash);
 }
 
-/**
- *  C++-style realpath
- */
-inline std::string absPath(const std::string& path) {
-    char buf[PATH_MAX];
-    char* res = realpath(path.c_str(), buf);
-    return (res == nullptr) ? "" : std::string(buf);
-}
-
-/**
- *  Join two paths together; note that this does not resolve overlaps or relative paths.
- */
-inline std::string pathJoin(const std::string& first, const std::string& second) {
-    unsigned firstPos = static_cast<unsigned>(first.size()) - 1;
-    while (first.at(firstPos) == '/') {
-        firstPos--;
-    }
-    unsigned secondPos = 0;
-    while (second.at(secondPos) == '/') {
-        secondPos++;
-    }
-    return first.substr(0, firstPos + 1) + '/' + second.substr(secondPos);
-}
-
 /*
  * Find out if an executable given by @p tool exists in the path given @p path
  * relative to the directory given by @ base. A path here refers a
@@ -159,7 +134,7 @@ inline std::string findTool(const std::string& tool, const std::string& base, co
     while (std::getline(sstr, sub, ':')) {
         std::string subpath = dir + "/" + sub + '/' + tool;
         if (isExecutable(subpath)) {
-            return absPath(subpath);
+            return std::filesystem::canonical(subpath);
         }
     }
     return "";
@@ -189,38 +164,14 @@ inline std::string baseName(const std::string& filename) {
  * File name, with extension removed.
  */
 inline std::string simpleName(const std::string& path) {
-    std::string name = baseName(path);
-    const size_t lastDot = name.find_last_of('.');
-    // file has no extension
-    if (lastDot == std::string::npos) {
-        return name;
-    }
-    const size_t lastSlash = name.find_last_of('/');
-    // last slash occurs after last dot, so no extension
-    if (lastSlash != std::string::npos && lastSlash > lastDot) {
-        return name;
-    }
-    // last dot after last slash, or no slash
-    return name.substr(0, lastDot);
+    return std::filesystem::path(path).stem();
 }
 
 /**
  * File extension, with all else removed.
  */
 inline std::string fileExtension(const std::string& path) {
-    std::string name = path;
-    const size_t lastDot = name.find_last_of('.');
-    // file has no extension
-    if (lastDot == std::string::npos) {
-        return std::string();
-    }
-    const size_t lastSlash = name.find_last_of('/');
-    // last slash occurs after last dot, so no extension
-    if (lastSlash != std::string::npos && lastSlash > lastDot) {
-        return std::string();
-    }
-    // last dot after last slash, or no slash
-    return name.substr(lastDot + 1);
+    return std::filesystem::path(path).extension();
 }
 
 /**

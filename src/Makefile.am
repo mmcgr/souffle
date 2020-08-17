@@ -10,8 +10,6 @@ SUFFIXES = .cpp .h .yy .ll .cc .hh .h
 
 bin_PROGRAMS = souffle souffle-profile
 
-nodist_souffle_profile_SOURCES = $(BUILT_SOURCES)
-
 souffle_profile_sources = \
         include/souffle/ProfileDatabase.h                  \
         include/souffle/json11.h                           \
@@ -68,11 +66,6 @@ souffle_utility_sources = \
         include/souffle/utility/StreamUtil.h               \
         include/souffle/utility/StringUtil.h               \
         include/souffle/utility/tinyformat.h
-
-DIR := ${CURDIR}
-
-# ... which should no go to distribution
-nodist_souffle_SOURCES = $(BUILT_SOURCES)
 
 souffle_sources = \
         AggregateOp.h                                      \
@@ -393,9 +386,7 @@ souffle_sources = \
         synthesiser/Synthesiser.cpp                        \
         synthesiser/Synthesiser.h                          \
         synthesiser/SynthesiserRelation.cpp                \
-        synthesiser/SynthesiserRelation.h                  \
-        $(souffle_utility_sources)                         \
-        $(souffle_profile_sources)
+        synthesiser/SynthesiserRelation.h
 
 # -- build souffle as a library so it can be reused in testing
 noinst_LTLIBRARIES = libsouffle.la
@@ -442,11 +433,7 @@ soufflepublic_HEADERS = \
         include/souffle/Table.h                            \
         include/souffle/TypeAttribute.h                    \
         include/souffle/UnionFind.h                        \
-        include/souffle/json11.h                           \
-        $(souffle_utility_sources)                         \
-        $(souffle_io_sources)                              \
-        $(libz_sources)                                    \
-        $(sqlite_sources)
+        include/souffle/json11.h
 
 souffleprofiledir = $(soufflepublicdir)/profile
 
@@ -476,6 +463,6 @@ $(builddir)/parser/scanner.cc: $(srcdir)/parser/scanner.ll
 	$(FLEX) -o parser/scanner.cc $(srcdir)/parser/scanner.ll
 
 # driver depends on the generated header
-$(builddir)/parser/parser.cc $(builddir)/parser/stack.hh $(builddir)/parser/scanner.cc \
-    $(builddir)/main.cpp $(builddir)/parser/ParserDriver.cpp: $(builddir)/parser/parser.hh
+$(builddir)/parser/parser.cc $(builddir)/main.cpp $(builddir)/parser/ParserDriver.cpp: \
+	$(builddir)/parser/parser.hh $(builddir)/parser/scanner.cc
 

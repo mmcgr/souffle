@@ -8,7 +8,7 @@
 
 #pragma once
 
-#include "souffle/profile/StringUtils.h"
+#include "profile/StringUtils.h"
 #include "souffle/profile/Tui.h"
 
 #include <iostream>

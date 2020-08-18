@@ -10,63 +10,6 @@ SUFFIXES = .cpp .h .yy .ll .cc .hh .h
 
 bin_PROGRAMS = souffle souffle-profile
 
-souffle_profile_sources = \
-        include/souffle/ProfileDatabase.h                  \
-        include/souffle/json11.h                           \
-        include/souffle/profile/Cell.h                     \
-        include/souffle/profile/CellInterface.h            \
-        include/souffle/profile/Cli.h                      \
-        include/souffle/profile/DataComparator.h           \
-        include/souffle/profile/HtmlGenerator.h            \
-        include/souffle/profile/Iteration.h                \
-        include/souffle/profile/OutputProcessor.h          \
-        include/souffle/profile/ProgramRun.h               \
-        include/souffle/profile/Reader.h                   \
-        include/souffle/profile/Relation.h                 \
-        include/souffle/profile/Row.h                      \
-        include/souffle/profile/Rule.h                     \
-        include/souffle/profile/StringUtils.h              \
-        include/souffle/profile/Table.h                    \
-        include/souffle/profile/Tui.h                      \
-        include/souffle/profile/UserInputReader.h          \
-        include/souffle/profile/htmlCssChartist.h          \
-        include/souffle/profile/htmlCssStyle.h             \
-        include/souffle/profile/htmlJsChartistMin.h        \
-        include/souffle/profile/htmlJsChartistPlugin.h     \
-        include/souffle/profile/htmlJsMain.h               \
-        include/souffle/profile/htmlJsTableSort.h          \
-        include/souffle/profile/htmlJsUtil.h               \
-        include/souffle/profile/htmlMain.h
-
-souffle_swig_sources = \
-        include/souffle/swig/SwigInterface.h               \
-        include/souffle/swig/SwigInterface.i
-
-souffle_io_sources = \
-        include/souffle/io/IOSystem.h                      \
-        include/souffle/io/gzfstream.h                     \
-        include/souffle/io/ReadStream.h                    \
-        include/souffle/io/ReadStreamCSV.h                 \
-        include/souffle/io/ReadStreamJSON.h                \
-        include/souffle/io/ReadStreamSQLite.h              \
-        include/souffle/io/SerialisationStream.h           \
-        include/souffle/io/WriteStreamSQLite.h             \
-        include/souffle/io/WriteStream.h                   \
-        include/souffle/io/WriteStreamCSV.h                \
-        include/souffle/io/WriteStreamJSON.h
-
-souffle_utility_sources = \
-        include/souffle/utility/CacheUtil.h                \
-        include/souffle/utility/ContainerUtil.h            \
-        include/souffle/utility/FileUtil.h                 \
-        include/souffle/utility/EvaluatorUtil.h            \
-        include/souffle/utility/FunctionalUtil.h           \
-        include/souffle/utility/MiscUtil.h                 \
-        include/souffle/utility/ParallelUtil.h             \
-        include/souffle/utility/StreamUtil.h               \
-        include/souffle/utility/StringUtil.h               \
-        include/souffle/utility/tinyformat.h
-
 souffle_sources = \
         AggregateOp.h                                      \
         AstToRamTranslator.cpp                             \
@@ -263,8 +206,28 @@ souffle_sources = \
         parser/SrcLocation.h                               \
         parser/parser.cc                                   \
         parser/parser.hh                                   \
+        parser/parser.yy                                   \
         parser/scanner.cc                                  \
-        parser/stack.hh                                    \
+        parser/scanner.ll                                  \
+        profile/HtmlGenerator.cpp                          \
+        profile/Reader.cpp                                 \
+        profile/Tui.cpp                                    \
+        profile/UserInputReader.cpp                        \
+        profile/Cell.h                                     \
+        profile/CellInterface.h                            \
+        profile/Cli.h                                      \
+        profile/DataComparator.h                           \
+        profile/HtmlGenerator.h                            \
+        profile/Iteration.h                                \
+        profile/OutputProcessor.h                          \
+        profile/ProgramRun.h                               \
+        profile/Reader.h                                   \
+        profile/Relation.h                                 \
+        profile/Row.h                                      \
+        profile/Rule.h                                     \
+        profile/StringUtils.h                              \
+        profile/Table.h                                    \
+        profile/UserInputReader.h                          \
         ram/AbstractAggregate.h                            \
         ram/AbstractChoice.h                               \
         ram/AbstractConditional.h                          \
@@ -389,7 +352,7 @@ souffle_sources = \
         synthesiser/SynthesiserRelation.h
 
 # -- build souffle as a library so it can be reused in testing
-noinst_LTLIBRARIES = libsouffle.la
+lib_LTLIBRARIES = libsouffle.la
 libsouffle_la_SOURCES  = $(souffle_sources)
 libsouffle_la_CXXFLAGS = $(souffle_CPPFLAGS) $(FFI_CFLAGS)
 libsouffle_la_LDFLAGS = --static --dlopen --pic -ldl -lffi
@@ -400,13 +363,11 @@ souffle_CPPFLAGS = -I$(srcdir)/include
 
 souffle_profile_SOURCES = souffle_prof.cpp
 souffle_profile_CPPFLAGS = $(souffle_CPPFLAGS)
+souffle_profile_LDADD = libsouffle.la
 
 dist_bin_SCRIPTS = souffle-compile souffle-config
 
-EXTRA_DIST = parser/parser.yy parser/scanner.ll
-
 soufflepublicdir = $(includedir)/souffle
-
 soufflepublic_HEADERS = \
         include/souffle/BTree.h                            \
         include/souffle/BinaryConstraintOps.h              \
@@ -435,21 +396,41 @@ soufflepublic_HEADERS = \
         include/souffle/UnionFind.h                        \
         include/souffle/json11.h
 
-souffleprofiledir = $(soufflepublicdir)/profile
+souffleiodir = $(soufflepublicdir)/io
+souffleio_HEADERS = \
+        include/souffle/io/IOSystem.h                      \
+        include/souffle/io/gzfstream.h                     \
+        include/souffle/io/ReadStream.h                    \
+        include/souffle/io/ReadStreamCSV.h                 \
+        include/souffle/io/ReadStreamJSON.h                \
+        include/souffle/io/ReadStreamSQLite.h              \
+        include/souffle/io/SerialisationStream.h           \
+        include/souffle/io/WriteStreamSQLite.h             \
+        include/souffle/io/WriteStream.h                   \
+        include/souffle/io/WriteStreamCSV.h                \
+        include/souffle/io/WriteStreamJSON.h
 
-souffleprofile_HEADERS = $(souffle_profile_sources)
+souffleprofiledir = $(soufflepublicdir)/profile
+souffleprofile_HEADERS = \
+        include/souffle/profile/Tui.h
 
 souffleswigdir = $(soufflepublicdir)/swig
-
-souffleswig_HEADERS = $(souffle_swig_sources)
+souffleswig_HEADERS = \
+        include/souffle/swig/SwigInterface.h               \
+        include/souffle/swig/SwigInterface.i
 
 souffleutilitydir = $(soufflepublicdir)/utility
-
-souffleutility_HEADERS = $(souffle_utility_sources)
-
-souffleiodir = $(soufflepublicdir)/io
-
-souffleio_HEADERS = $(souffle_io_sources)
+souffleutility_HEADERS = \
+        include/souffle/utility/CacheUtil.h                \
+        include/souffle/utility/ContainerUtil.h            \
+        include/souffle/utility/FileUtil.h                 \
+        include/souffle/utility/EvaluatorUtil.h            \
+        include/souffle/utility/FunctionalUtil.h           \
+        include/souffle/utility/MiscUtil.h                 \
+        include/souffle/utility/ParallelUtil.h             \
+        include/souffle/utility/StreamUtil.h               \
+        include/souffle/utility/StringUtil.h               \
+        include/souffle/utility/tinyformat.h
 
 # files to clean
 CLEANFILES = $(BUILT_SOURCES)  parser/parser.cc parser/scanner.cc parser/parser.hh parser/stack.hh

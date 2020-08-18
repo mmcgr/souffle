@@ -47,8 +47,8 @@ CXX="$(printenv CXX || true)"
 test -z "$CXX" && CXX="@CXX@"
 CPPFLAGS="$(printenv CPPFLAGS || true) -std=c++17 @CPPFLAGS@"
 CXXFLAGS="$(printenv CXXFLAGS || true) @SOUFFLE_CXXFLAGS@ -march=native"
-LDFLAGS="$(printenv LDFLAGS || true) @LDFLAGS@"
-LIBS="$(printenv LIBS || true) @LIBS@"
+LDFLAGS="$(printenv LDFLAGS || true) -L.libs @LDFLAGS@"
+LIBS="$(printenv LIBS || true) -lsouffle @LIBS@"
 
 # set by command flags
 WARNINGS=""

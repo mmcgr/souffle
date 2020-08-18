@@ -8,9 +8,9 @@
 
 #pragma once
 
-#include "souffle/profile/Relation.h"
-#include "souffle/profile/StringUtils.h"
-#include "souffle/profile/Table.h"
+#include "profile/Relation.h"
+#include "profile/StringUtils.h"
+#include "profile/Table.h"
 #include <chrono>
 #include <memory>
 #include <set>

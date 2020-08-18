@@ -14,7 +14,7 @@
  *
  ***********************************************************************/
 
-#include "souffle/profile/Cli.h"
+#include "profile/Cli.h"
 
 #include <iostream>
 

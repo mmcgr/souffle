@@ -8,8 +8,8 @@
 
 #pragma once
 
-#include "souffle/profile/CellInterface.h"
-#include "souffle/profile/StringUtils.h"
+#include "profile/CellInterface.h"
+#include "profile/StringUtils.h"
 
 #include <chrono>
 #include <iostream>

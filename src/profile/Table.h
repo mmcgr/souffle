@@ -8,8 +8,8 @@
 
 #pragma once
 
-#include "souffle/profile/DataComparator.h"
-#include "souffle/profile/Row.h"
+#include "profile/DataComparator.h"
+#include "profile/Row.h"
 #include <algorithm>
 #include <vector>
 

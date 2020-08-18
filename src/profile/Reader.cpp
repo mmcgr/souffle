@@ -6,15 +6,14 @@
  * - <souffle root>/licenses/SOUFFLE-UPL.txt
  */
 
-#pragma once
-
+#include "profile/Reader.h"
+#include "profile/Iteration.h"
+#include "profile/ProgramRun.h"
+#include "profile/Relation.h"
+#include "profile/Rule.h"
+#include "profile/StringUtils.h"
 #include "souffle/ProfileDatabase.h"
 #include "souffle/ProfileEvent.h"
-#include "souffle/profile/Iteration.h"
-#include "souffle/profile/ProgramRun.h"
-#include "souffle/profile/Relation.h"
-#include "souffle/profile/Rule.h"
-#include "souffle/profile/StringUtils.h"
 #include <cassert>
 #include <chrono>
 #include <cstdlib>
@@ -265,131 +264,101 @@ public:
 };
 }  // namespace
 
-/*
- * Input reader and processor for log files
- */
-class Reader {
-private:
-    std::string file_loc;
-    std::streampos gpos;
-    const ProfileDatabase& db = ProfileEventSingleton::instance().getDB();
-    bool loaded = false;
-    bool online{true};
+Reader::Reader(std::string filename, std::shared_ptr<ProgramRun> run)
+        : file_loc(std::move(filename)), run(std::move(run)) {
+    try {
+        ProfileEventSingleton::instance().setDBFromFile(file_loc);
+    } catch (const std::exception& e) {
+        fatal("exception whilst reading profile DB: %s", e.what());
+    }
+}
 
-    std::unordered_map<std::string, std::shared_ptr<Relation>> relationMap{};
-    int rel_id{0};
+Reader::Reader(std::shared_ptr<ProgramRun> run) : run(std::move(run)) {}
 
-public:
-    std::shared_ptr<ProgramRun> run;
-
-    Reader(std::string filename, std::shared_ptr<ProgramRun> run)
-            : file_loc(std::move(filename)), run(std::move(run)) {
-        try {
-            ProfileEventSingleton::instance().setDBFromFile(file_loc);
-        } catch (const std::exception& e) {
-            fatal("exception whilst reading profile DB: %s", e.what());
+void Reader::processFile() {
+    rel_id = 0;
+    relationMap.clear();
+    auto programDuration = dynamic_cast<DurationEntry*>(db.lookupEntry({"program", "runtime"}));
+    if (programDuration == nullptr) {
+        auto startTimeEntry = dynamic_cast<TimeEntry*>(db.lookupEntry({"program", "starttime"}));
+        if (startTimeEntry != nullptr) {
+            run->setStarttime(startTimeEntry->getTime());
+            run->setEndtime(std::chrono::duration_cast<microseconds>(now().time_since_epoch()));
         }
+    } else {
+        run->setStarttime(programDuration->getStart());
+        run->setEndtime(programDuration->getEnd());
+        online = false;
     }
 
-    Reader(std::shared_ptr<ProgramRun> run) : run(std::move(run)) {}
-    /**
-     * Read the contents from file into the class
-     */
-    void processFile() {
-        rel_id = 0;
-        relationMap.clear();
-        auto programDuration = dynamic_cast<DurationEntry*>(db.lookupEntry({"program", "runtime"}));
-        if (programDuration == nullptr) {
-            auto startTimeEntry = dynamic_cast<TimeEntry*>(db.lookupEntry({"program", "starttime"}));
-            if (startTimeEntry != nullptr) {
-                run->setStarttime(startTimeEntry->getTime());
-                run->setEndtime(std::chrono::duration_cast<microseconds>(now().time_since_epoch()));
-            }
-        } else {
-            run->setStarttime(programDuration->getStart());
-            run->setEndtime(programDuration->getEnd());
-            online = false;
+    auto relations = dynamic_cast<DirectoryEntry*>(db.lookupEntry({"program", "relation"}));
+    if (relations == nullptr) {
+        // Souffle hasn't generated any profiling information yet.
+        return;
+    }
+    for (const auto& cur : relations->getKeys()) {
+        auto relation = dynamic_cast<DirectoryEntry*>(db.lookupEntry({"program", "relation", cur}));
+        if (relation != nullptr) {
+            addRelation(*relation);
         }
-
-        auto relations = dynamic_cast<DirectoryEntry*>(db.lookupEntry({"program", "relation"}));
-        if (relations == nullptr) {
-            // Souffle hasn't generated any profiling information yet.
-            return;
-        }
-        for (const auto& cur : relations->getKeys()) {
-            auto relation = dynamic_cast<DirectoryEntry*>(db.lookupEntry({"program", "relation", cur}));
-            if (relation != nullptr) {
-                addRelation(*relation);
+    }
+    for (const auto& relation : relationMap) {
+        for (const auto& rule : relation.second->getRuleMap()) {
+            for (const auto& atom : rule.second->getAtoms()) {
+                std::string relationName = extractRelationNameFromAtom(atom);
+                relationMap[relationName]->addReads(atom.frequency);
             }
         }
-        for (const auto& relation : relationMap) {
-            for (const auto& rule : relation.second->getRuleMap()) {
+        for (const auto& iteration : relation.second->getIterations()) {
+            for (const auto& rule : iteration->getRules()) {
                 for (const auto& atom : rule.second->getAtoms()) {
                     std::string relationName = extractRelationNameFromAtom(atom);
+                    if (relationName.substr(0, 6) == "@delta") {
+                        relationName = relationName.substr(7);
+                    }
+                    assert(relationMap.count(relationName) > 0 || "Relation name for atom not found");
                     relationMap[relationName]->addReads(atom.frequency);
                 }
             }
-            for (const auto& iteration : relation.second->getIterations()) {
-                for (const auto& rule : iteration->getRules()) {
-                    for (const auto& atom : rule.second->getAtoms()) {
-                        std::string relationName = extractRelationNameFromAtom(atom);
-                        if (relationName.substr(0, 6) == "@delta") {
-                            relationName = relationName.substr(7);
-                        }
-                        assert(relationMap.count(relationName) > 0 || "Relation name for atom not found");
-                        relationMap[relationName]->addReads(atom.frequency);
-                    }
-                }
-            }
-        }
-        run->setRelationMap(this->relationMap);
-        loaded = true;
-    }
-
-    void save(std::string f_name);
-
-    inline bool isLive() {
-        return online;
-    }
-
-    void addRelation(const DirectoryEntry& relation) {
-        const std::string& name = cleanRelationName(relation.getKey());
-
-        relationMap.emplace(name, std::make_shared<Relation>(name, createId()));
-        auto& rel = *relationMap[name];
-        RelationVisitor relationVisitor(rel);
-
-        for (const auto& key : relation.getKeys()) {
-            relation.readEntry(key)->accept(relationVisitor);
         }
     }
+    run->setRelationMap(this->relationMap);
+    loaded = true;
+}
 
-    inline bool isLoaded() {
-        return loaded;
+void Reader::addRelation(const DirectoryEntry& relation) {
+    const std::string& name = cleanRelationName(relation.getKey());
+
+    relationMap.emplace(name, std::make_shared<Relation>(name, createId()));
+    auto& rel = *relationMap[name];
+    RelationVisitor relationVisitor(rel);
+
+    for (const auto& key : relation.getKeys()) {
+        relation.readEntry(key)->accept(relationVisitor);
     }
+}
 
-    std::string RelationcreateId() {
-        return "R" + std::to_string(++rel_id);
-    }
+std::string Reader::RelationcreateId() {
+    return "R" + std::to_string(++rel_id);
+}
 
-    std::string createId() {
-        return "R" + std::to_string(++rel_id);
-    }
+std::string Reader::createId() {
+    return "R" + std::to_string(++rel_id);
+}
 
-protected:
-    std::string cleanRelationName(const std::string& relationName) {
-        std::string cleanName = relationName;
-        for (auto& cur : cleanName) {
-            if (cur == '-') {
-                cur = '.';
-            }
+std::string Reader::cleanRelationName(const std::string& relationName) {
+    std::string cleanName = relationName;
+    for (auto& cur : cleanName) {
+        if (cur == '-') {
+            cur = '.';
         }
-        return cleanName;
     }
-    std::string extractRelationNameFromAtom(const Atom& atom) {
-        return cleanRelationName(atom.identifier.substr(0, atom.identifier.find('(')));
-    }
-};
+    return cleanName;
+}
+
+std::string Reader::extractRelationNameFromAtom(const Atom& atom) {
+    return cleanRelationName(atom.identifier.substr(0, atom.identifier.find('(')));
+}
 
 }  // namespace profile
 }  // namespace souffle

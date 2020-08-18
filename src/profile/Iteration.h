@@ -8,7 +8,7 @@
 
 #pragma once
 
-#include "souffle/profile/Rule.h"
+#include "profile/Rule.h"
 #include <chrono>
 #include <memory>
 #include <sstream>

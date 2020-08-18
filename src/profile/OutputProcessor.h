@@ -8,15 +8,15 @@
 
 #pragma once
 
-#include "souffle/profile/Cell.h"
-#include "souffle/profile/CellInterface.h"
-#include "souffle/profile/Iteration.h"
-#include "souffle/profile/ProgramRun.h"
-#include "souffle/profile/Relation.h"
-#include "souffle/profile/Row.h"
-#include "souffle/profile/Rule.h"
-#include "souffle/profile/StringUtils.h"
-#include "souffle/profile/Table.h"
+#include "profile/Cell.h"
+#include "profile/CellInterface.h"
+#include "profile/Iteration.h"
+#include "profile/ProgramRun.h"
+#include "profile/Relation.h"
+#include "profile/Row.h"
+#include "profile/Rule.h"
+#include "profile/StringUtils.h"
+#include "profile/Table.h"
 #include <memory>
 #include <string>
 #include <unordered_map>

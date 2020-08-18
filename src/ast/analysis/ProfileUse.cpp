@@ -18,9 +18,9 @@
 #include "ast/analysis/ProfileUse.h"
 #include "Global.h"
 #include "ast/QualifiedName.h"
-#include "souffle/profile/ProgramRun.h"
-#include "souffle/profile/Reader.h"
-#include "souffle/profile/Relation.h"
+#include "profile/ProgramRun.h"
+#include "profile/Reader.h"
+#include "profile/Relation.h"
 #include <limits>
 #include <string>
 

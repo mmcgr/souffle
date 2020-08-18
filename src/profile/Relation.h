@@ -8,8 +8,8 @@
 
 #pragma once
 
-#include "souffle/profile/Iteration.h"
-#include "souffle/profile/Rule.h"
+#include "profile/Iteration.h"
+#include "profile/Rule.h"
 #include <chrono>
 #include <memory>
 #include <sstream>

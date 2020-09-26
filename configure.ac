@@ -185,10 +185,20 @@ fi
 
 AC_ARG_ENABLE(
   [64bit-domain],
-  [AS_HELP_STRING([--enable-64bit-domain], [Enable 64-bit number values in Datalog tuples])]
+  [AS_HELP_STRING([--enable-64bit-domain], [Force 64-bit number values in Datalog tuples])]
 )
+AC_ARG_ENABLE(
+  [32bit-domain],
+  [AS_HELP_STRING([--enable-32bit-domain], [Force 32-bit number values in Datalog tuples])]
+)
+AS_IF([test "x$enable_64bit_domain" = "xyes" -a "x$enable_32bit_domain" = "xyes"], [
+  AC_MSG_ERROR(["Domain cannot be forced to be both 64 and 32 bit at the same time"])
+])
 AS_IF([test "x$enable_64bit_domain" = "xyes"], [
   AS_VAR_APPEND(CXXFLAGS, [" -DRAM_DOMAIN_SIZE=64"])
+])
+AS_IF([test "x$enable_32bit_domain" = "xyes"], [
+  AS_VAR_APPEND(CXXFLAGS, [" -DRAM_DOMAIN_SIZE=32"])
 ])
 
 dnl Check for the program(s), define a variable and perform substitution in the

@@ -2271,6 +2271,12 @@ void Synthesiser::generateCode(std::ostream& os, const std::string& id, bool& wi
     if (Global::config().has("verbose")) {
         os << "#define _SOUFFLE_STATS\n";
     }
+    // Set the domain size
+    if (Global::config().has("domain-size")) {
+        os << "#ifndef RAM_DOMAIN_SIZE\n";
+        os << "#define RAM_DOMAIN_SIZE " << Global::config().get("domain-size") << "\n";
+        os << "#endif\n";
+    }
     os << "\n#include \"souffle/CompiledSouffle.h\"\n";
     if (Global::config().has("provenance")) {
         os << "#include <mutex>\n";

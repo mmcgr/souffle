@@ -19,6 +19,7 @@
 #include "souffle/RamTypes.h"
 #include <algorithm>
 #include <cctype>
+#include <charconv>
 #include <cstdlib>
 #include <fstream>
 #include <limits>
@@ -42,108 +43,77 @@ inline bool isPrefix(const std::string& prefix, const std::string& element);
  * The procedure accepts prefixes 0b (if base = 2) and 0x (if base = 16)
  * If base = 0, the procedure will try to infer the base from the prefix, if present.
  */
-inline RamSigned RamSignedFromString(
-        const std::string& str, std::size_t* position = nullptr, const int base = 10) {
-    RamSigned val;
-
+template <typename T>
+inline void RamFromString(
+        T& value, const std::string& str, std::size_t* position = nullptr, const int base = 10) {
     if (base == 0) {
         if (isPrefix("-0b", str) || isPrefix("0b", str)) {
-            return RamSignedFromString(str, position, 2);
+            return RamFromString<T>(value, str, position, 2);
         } else if (isPrefix("-0x", str) || isPrefix("0x", str)) {
-            return RamSignedFromString(str, position, 16);
+            return RamFromString<T>(value, str, position, 16);
         } else {
-            return RamSignedFromString(str, position);
+            return RamFromString<T>(value, str, position);
         }
     }
-    std::string binaryNumber;
-    bool parsingBinary = base == 2;
 
-    // stoi/stoll can't handle base 2 prefix by default.
-    if (parsingBinary) {
+    if (base == 2) {
         if (isPrefix("-0b", str)) {
-            binaryNumber = "-" + str.substr(3);
+            std::string binaryString = str.substr(2);
+            binaryString.at(0) = '-';
+            RamFromString<T>(value, binaryString, position, 2);
+            *position += 2;
+            return;
         } else if (isPrefix("0b", str)) {
-            binaryNumber = str.substr(2);
+            std::string binaryString = str.substr(2);
+            RamFromString<T>(value, binaryString, position, 2);
+            *position += 2;
+            return;
         }
     }
-    const std::string& tmp = parsingBinary ? binaryNumber : str;
+    const char* start = str.c_str();
+    const char* end = str.c_str() + str.size();
 
-#if RAM_DOMAIN_SIZE == 64
-    val = std::stoll(tmp, position, base);
-#else
-    val = std::stoi(tmp, position, base);
-#endif
-
-    if (parsingBinary && position != nullptr) {
-        *position += 2;
+    auto result = std::from_chars(start, end, value, base);
+    if (result.ptr == start) {
+        throw std::invalid_argument("Invalid input.");
     }
-
-    return val;
+    if (position != nullptr) {
+        *position = result.ptr - start;
+    }
 }
 
-/**
- * Converts a string to a RamFloat
- */
-inline RamFloat RamFloatFromString(const std::string& str, std::size_t* position = nullptr) {
-    RamFloat val;
-#if RAM_DOMAIN_SIZE == 64
-    val = std::stod(str, position);
-#else
-    val = std::stof(str, position);
-#endif
-    return static_cast<RamFloat>(val);
+// std::from_chars is commonly incomplete, so add some float-specific versions for now
+template <>
+inline void RamFromString(float& value, const std::string& str, std::size_t* position, const int /* base */) {
+    value = std::stof(str, position);
 }
-/**
- * Converts a string to a RamUnsigned
- *
- * This procedure has similar behaviour to std::stoul/stoull.
- *
- * The procedure accepts prefixes 0b (if base = 2) and 0x (if base = 16)
- * If base = 0, the procedure will try to infer the base from the prefix, if present.
- */
+
+template <>
+inline void RamFromString(
+        double& value, const std::string& str, std::size_t* position, const int /* base */) {
+    value = std::stod(str, position);
+}
+
+template <typename T>
+inline T RamFromString(const std::string& str, std::size_t* position = nullptr, const int base = 10) {
+    T value{};
+    RamFromString(value, str, position, base);
+    return value;
+}
+
+inline RamSigned RamSignedFromString(
+        const std::string& str, std::size_t* position = nullptr, const int base = 10) {
+    return RamFromString<RamSigned>(str, position, base);
+}
+
 inline RamUnsigned RamUnsignedFromString(
         const std::string& str, std::size_t* position = nullptr, const int base = 10) {
-    // Be default C++ (stoul) allows unsigned numbers starting with "-".
-    if (isPrefix("-", str)) {
-        throw std::invalid_argument("Unsigned number can't start with minus.");
-    }
+    return RamFromString<RamUnsigned>(str, position, base);
+}
 
-    if (base == 0) {
-        if (isPrefix("0b", str)) {
-            return RamUnsignedFromString(str, position, 2);
-        } else if (isPrefix("0x", str)) {
-            return RamUnsignedFromString(str, position, 16);
-        } else {
-            return RamUnsignedFromString(str, position);
-        }
-    }
-
-    // stoul/stoull can't handle binary prefix by default.
-    std::string binaryNumber;
-    bool parsingBinary = false;
-    if (base == 2 && isPrefix("0b", str)) {
-        binaryNumber = str.substr(2);
-        parsingBinary = true;
-    }
-    const std::string& tmp = parsingBinary ? binaryNumber : str;
-
-    RamUnsigned val;
-#if RAM_DOMAIN_SIZE == 64
-    val = std::stoull(tmp, position, base);
-#else
-    val = std::stoul(tmp, position, base);
-#endif
-
-    if (parsingBinary && position != nullptr) {
-        *position += 2;
-    }
-
-    // check if it's safe to cast (stoul returns unsigned long)
-    if (val > std::numeric_limits<RamUnsigned>::max()) {
-        throw std::invalid_argument("Unsigned number of of bounds");
-    }
-
-    return static_cast<RamUnsigned>(val);
+inline RamFloat RamFloatFromString(
+        const std::string& str, std::size_t* position = nullptr, const int base = 10) {
+    return RamFromString<RamFloat>(str, position, base);
 }
 
 /**
@@ -157,7 +127,8 @@ inline bool canBeParsedAsRamSigned(const std::string& string) {
     size_t charactersRead = 0;
 
     try {
-        RamSignedFromString(string, &charactersRead, 0);
+        RamSigned value{};
+        RamFromString(value, string, &charactersRead, 0);
     } catch (...) {
         return false;
     }
@@ -173,7 +144,8 @@ inline bool canBeParsedAsRamSigned(const std::string& string) {
 inline bool canBeParsedAsRamUnsigned(const std::string& string) {
     size_t charactersRead = 0;
     try {
-        RamUnsignedFromString(string, &charactersRead, 0);
+        RamUnsigned value{};
+        RamFromString(value, string, &charactersRead, 0);
     } catch (...) {
         return false;
     }
@@ -186,24 +158,21 @@ inline bool canBeParsedAsRamUnsigned(const std::string& string) {
 inline bool canBeParsedAsRamFloat(const std::string& string) {
     size_t charactersRead = 0;
     try {
-        RamFloatFromString(string, &charactersRead);
+        RamFloat value{};
+        RamFromString(value, string, &charactersRead, 0);
     } catch (...) {
         return false;
     }
     return charactersRead == string.size();
 }
 
-#if RAM_DOMAIN_SIZE == 64
-inline RamDomain stord(const std::string& str, std::size_t* pos = nullptr, int base = 10) {
-    return static_cast<RamDomain>(std::stoull(str, pos, base));
+inline RamDomain stord(const std::string& str, std::size_t* /* pos */ = nullptr, int base = 10) {
+    RamDomain val;
+    const char* start = str.c_str();
+    const char* end = str.c_str() + str.size();
+    std::from_chars(start, end, val, base);
+    return val;
 }
-#elif RAM_DOMAIN_SIZE == 32
-inline RamDomain stord(const std::string& str, std::size_t* pos = nullptr, int base = 10) {
-    return static_cast<RamDomain>(std::stoul(str, pos, base));
-}
-#else
-#error RAM Domain is neither 32bit nor 64bit
-#endif
 
 /**
  * Check whether a string is a sequence of digits

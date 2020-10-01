@@ -17,6 +17,7 @@
 #include "souffle/RamTypes.h"
 #include "souffle/SymbolTable.h"
 #include "souffle/io/ReadStream.h"
+#include "souffle/utility/ContainerUtil.h"
 #include "souffle/utility/MiscUtil.h"
 #include "souffle/utility/StringUtil.h"
 #include <cassert>

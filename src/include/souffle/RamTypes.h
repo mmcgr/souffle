@@ -81,14 +81,13 @@ template <typename To = RamDomain, typename From>
 inline To ramBitCast(From source) {
     static_assert(isRamType<From> && isRamType<To>, "Bit casting should only be used on Ram Types.");
     static_assert(sizeof(To) == sizeof(From), "Can't bit cast types with different size.");
-    To destination;
-    memcpy(&destination, &source, sizeof(destination));
-    return destination;
-}
-
-template <>
-inline RamDomain ramBitCast(RamDomain source) {
-    return source;
+    if constexpr (std::is_same<To, From>::value) {
+        return source;
+    } else {
+        To destination;
+        memcpy(&destination, &source, sizeof(destination));
+        return destination;
+    }
 }
 
 /** lower and upper boundaries for the ram types **/

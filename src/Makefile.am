@@ -364,15 +364,17 @@ souffle_sources = \
 # -- build souffle as a library so it can be reused in testing
 noinst_LTLIBRARIES = libsouffle.la
 libsouffle_la_SOURCES  = $(souffle_sources)
-libsouffle_la_CXXFLAGS = $(souffle_CPPFLAGS) $(FFI_CFLAGS)
+libsouffle_la_CXXFLAGS = $(souffle_CPPFLAGS) $(FFI_CFLAGS) -DRAM_DOMAIN_SIZE=$(DOMAINSIZE)
 libsouffle_la_LDFLAGS = --static --dlopen --pic -ldl -lffi
 
 souffle_SOURCES = main.cpp
 souffle_LDADD = libsouffle.la
-souffle_CPPFLAGS = -I$(srcdir)/include
+souffle_CPPFLAGS = -I$(srcdir)/include -DRAM_DOMAIN_SIZE=$(DOMAINSIZE)
+
 
 souffle_profile_SOURCES = souffle_prof.cpp
-souffle_profile_CPPFLAGS = $(souffle_CPPFLAGS)
+souffle_profile_CPPFLAGS = $(souffle_CPPFLAGS) -DRAM_DOMAIN_SIZE=$(DOMAINSIZE)
+
 
 dist_bin_SCRIPTS = souffle-compile souffle-config
 

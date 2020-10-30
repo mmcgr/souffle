@@ -195,12 +195,9 @@ AS_IF([test "x$enable_64bit_domain" = "xyes" -a "x$enable_32bit_domain" = "xyes"
   AC_MSG_ERROR(["Domain cannot be forced to be both 64 and 32 bit at the same time"])
 ])
 AS_IF([test "x$enable_64bit_domain" = "xyes"], [
-  AS_VAR_APPEND(CXXFLAGS, [" -DRAM_DOMAIN_SIZE=64"])
   DOMAINSIZE=64
   AC_SUBST([DOMAINSIZE])
-])
-AS_IF([test "x$enable_32bit_domain" = "xyes"], [
-  AS_VAR_APPEND(CXXFLAGS, [" -DRAM_DOMAIN_SIZE=32"])
+], [
   DOMAINSIZE=32
   AC_SUBST([DOMAINSIZE])
 ])

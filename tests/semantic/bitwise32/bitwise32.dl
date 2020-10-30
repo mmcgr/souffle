@@ -1,0 +1,62 @@
+.pragma "domain-size" 32
+
+.decl A(x:number)
+A(11).
+A(4711).
+A(121233).
+A(1234).
+A(-1).
+A(-100).
+
+.decl r_band(x:number, y:number, z:number)
+.output r_band()
+r_band(x band y, x, y) :- A(x), A(y).
+
+.decl r_bxor(x:number, y:number, z:number)
+.output r_bxor()
+r_bxor(x bxor y, x, y) :- A(x), A(y).
+
+.decl r_bor(x:number, y:number, z:number)
+.output r_bor()
+r_bor(x bor y, x, y) :- A(x), A(y).
+
+.decl r_bnot(x:number, y:number)
+.output r_bnot()
+r_bnot(bnot x, x) :- A(x).
+
+
+.decl B0(x:number)
+B0(-10).
+B0(-1).
+B0(0).
+B0(1).
+B0(10).
+
+.decl B1(x:number)
+B1(-64).
+B1(-48).
+B1(-32).
+B1(-16).
+B1(-6).
+B1(-3).
+B1(-2).
+B1(-1).
+B1(0).
+B1(1).
+B1(3).
+B1(6).
+B1(16).
+B1(31).
+
+.decl r_shift_L(x:number, y:number, z:number)
+.output r_shift_L()
+r_shift_L(x, y, z) :- z = x bshl y, B0(x), B1(y).
+
+.decl r_shift_R(x:number, y:number, z:number)
+.output r_shift_R()
+r_shift_R(x, y, z) :- z = x bshr y, B0(x), B1(y).
+
+.decl r_shift_R_unsigned(x:number, y:number, z:number)
+.output r_shift_R_unsigned()
+r_shift_R_unsigned(x, y, z) :- z = (x band LO_32) bshru y, B0(x), B1(y).
+

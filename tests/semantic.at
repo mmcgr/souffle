@@ -98,7 +98,11 @@ NEGATIVE_TEST([attrib_dupl],[semantic])
 POSITIVE_TEST([bin1],[semantic])
 POSITIVE_TEST([bin],[semantic])
 POSITIVE_TEST([binhex],[semantic])
-POSITIVE_TEST([bitwise],[semantic])
+if [[ $DOMAINSIZE = "32" ]]; then
+POSITIVE_TEST([bitwise32],[semantic])
+else if [[ $DOMAINSIZE = "64" ]]; then
+POSITIVE_TEST([bitwise64],[semantic])
+fi
 POSITIVE_TEST([bool],[semantic])
 NEGATIVE_TEST([choice],[semantic])
 NEGATIVE_TEST([comp_clauses],[semantic])

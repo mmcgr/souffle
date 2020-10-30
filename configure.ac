@@ -196,9 +196,13 @@ AS_IF([test "x$enable_64bit_domain" = "xyes" -a "x$enable_32bit_domain" = "xyes"
 ])
 AS_IF([test "x$enable_64bit_domain" = "xyes"], [
   AS_VAR_APPEND(CXXFLAGS, [" -DRAM_DOMAIN_SIZE=64"])
+  DOMAINSIZE=64
+  AC_SUBST([DOMAINSIZE])
 ])
 AS_IF([test "x$enable_32bit_domain" = "xyes"], [
   AS_VAR_APPEND(CXXFLAGS, [" -DRAM_DOMAIN_SIZE=32"])
+  DOMAINSIZE=32
+  AC_SUBST([DOMAINSIZE])
 ])
 
 dnl Check for the program(s), define a variable and perform substitution in the

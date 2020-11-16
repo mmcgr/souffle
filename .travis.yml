@@ -51,3 +51,122 @@ jobs:
     name: Windows WSL interface without OMP
     before_script: '.travis/init-windows-test.sh'
     script: '.travis/windows-test.sh'
+# MSVC souffle-interface
+  - stage: Testing
+    os: windows
+    language: cpp
+    name: Windows WSL interface without OMP
+    before_script: '.travis/init-windows-test.sh'
+    script: '.travis/windows-test.sh'
+# MSVC souffle-interface
+  - stage: Testing
+    os: windows
+    language: cpp
+    name: Windows WSL interface without OMP
+    before_script: '.travis/init-windows-test.sh'
+    script: '.travis/windows-test.sh'
+# MSVC souffle-interface
+  - stage: Testing
+    os: windows
+    language: cpp
+    name: Windows WSL interface without OMP
+    before_script: '.travis/init-windows-test.sh'
+    script: '.travis/windows-test.sh'
+# MSVC souffle-interface
+  - stage: Testing
+    os: windows
+    language: cpp
+    name: Windows WSL interface without OMP
+    before_script: '.travis/init-windows-test.sh'
+    script: '.travis/windows-test.sh'
+# MSVC souffle-interface
+  - stage: Testing
+    os: windows
+    language: cpp
+    name: Windows WSL interface without OMP
+    before_script: '.travis/init-windows-test.sh'
+    script: '.travis/windows-test.sh'
+# MSVC souffle-interface
+  - stage: Testing
+    os: windows
+    language: cpp
+    name: Windows WSL interface without OMP
+    before_script: '.travis/init-windows-test.sh'
+    script: '.travis/windows-test.sh'
+# MSVC souffle-interface
+  - stage: Testing
+    os: windows
+    language: cpp
+    name: Windows WSL interface without OMP
+    before_script: '.travis/init-windows-test.sh'
+    script: '.travis/windows-test.sh'
+# MSVC souffle-interface
+  - stage: Testing
+    os: windows
+    language: cpp
+    name: Windows WSL interface without OMP
+    before_script: '.travis/init-windows-test.sh'
+    script: '.travis/windows-test.sh'
+# MSVC souffle-interface
+  - stage: Testing
+    os: windows
+    language: cpp
+    name: Windows WSL interface without OMP
+    before_script: '.travis/init-windows-test.sh'
+    script: '.travis/windows-test.sh'
+# MSVC souffle-interface
+  - stage: Testing
+    os: windows
+    language: cpp
+    name: Windows WSL interface without OMP
+    before_script: '.travis/init-windows-test.sh'
+    script: '.travis/windows-test.sh'
+# MSVC souffle-interface
+  - stage: Testing
+    os: windows
+    language: cpp
+    name: Windows WSL interface without OMP
+    before_script: '.travis/init-windows-test.sh'
+    script: '.travis/windows-test.sh'
+# MSVC souffle-interface
+  - stage: Testing
+    os: windows
+    language: cpp
+    name: Windows WSL interface without OMP
+    before_script: '.travis/init-windows-test.sh'
+    script: '.travis/windows-test.sh'
+# MSVC souffle-interface
+  - stage: Testing
+    os: windows
+    language: cpp
+    name: Windows WSL interface without OMP
+    before_script: '.travis/init-windows-test.sh'
+    script: '.travis/windows-test.sh'
+# MSVC souffle-interface
+  - stage: Testing
+    os: windows
+    language: cpp
+    name: Windows WSL interface without OMP
+    before_script: '.travis/init-windows-test.sh'
+    script: '.travis/windows-test.sh'
+# MSVC souffle-interface
+  - stage: Testing
+    os: windows
+    language: cpp
+    name: Windows WSL interface without OMP
+    before_script: '.travis/init-windows-test.sh'
+    script: '.travis/windows-test.sh'
+# MSVC souffle-interface
+  - stage: Testing
+    os: windows
+    language: cpp
+    name: Windows WSL interface without OMP
+    before_script: '.travis/init-windows-test.sh'
+    script: '.travis/windows-test.sh'
+# MSVC souffle-interface
+  - stage: Testing
+    os: windows
+    language: cpp
+    name: Windows WSL interface without OMP
+    before_script: '.travis/init-windows-test.sh'
+    script: '.travis/windows-test.sh'

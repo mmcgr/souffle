@@ -7,8 +7,8 @@ jobs:
   CPack-Package-Build-Aarch64-Ubuntu:
     runs-on: ubuntu-latest
     steps:
+      -yyses: actions/checkout@v2
       - name: Checkout
-        uses: actions/checkout@v2
         uses: uraimo/run-on-arch-action@v2
         with:
           fetch-depth: 0
@@ -38,8 +38,8 @@ jobs:
   CPack-Package-Build-Aarch64-Fedora:
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v2
       - name: Checkout
-        uses: actions/checkout@v2
         uses: uraimo/run-on-arch-action@v2
         with:
           fetch-depth: 0

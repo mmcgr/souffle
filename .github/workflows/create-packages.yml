@@ -17,7 +17,7 @@ jobs:
 
           install: |
             apt-get update -q -y
-            apt-get install -q -y	bash-completion autoconf automake bison build-essential clang doxygen flex g++ git libffi-dev libncurses5-dev libtool libsqlite3-dev make mcpp python sqlite zlib1g-dev cmake
+            apt-get install -q -y bash-completion autoconf automake bison build-essential clang doxygen flex g++ git libffi-dev libncurses5-dev libtool libsqlite3-dev make mcpp python sqlite zlib1g-dev cmake
 
           run: |
             cmake -S . -B ./build -DSOUFFLE_DOMAIN_64BIT=ON
@@ -26,7 +26,7 @@ jobs:
       - name: Naming Artifact
         id: naming
         run: |
-          rename 's/(.*\.deb)/aarch64-ubuntu20.04-$1/' build/*deb
+          mv build/*deb build/aarch64_ubuntu2004-souffle-$(git describe --tags).deb
           echo "::set-output name=artifact_name::$(ls build/*deb | head -n1"
 
       - name: Upload Artifact
@@ -56,6 +56,7 @@ jobs:
       - name: Naming Artifact
         id: naming
         run: |
+          mv build/*rpm build/aarch64_ubuntu-$(. /lib/os-release; echo $VERSION_ID)-souffle-$(git describe --tags).rpm
           rename "s/(.*\.rpm)/fedora-$(. /lib/os-release; echo $VERSION_ID)-$1/" build/*rpm
           echo "::set-output name=artifact_name::$(ls build/*rpm | head -n1"
 

@@ -4,6 +4,67 @@ on:
     types: [published]
 
 jobs:
+  CPack-Package-Build-Aarch64-Ubuntu:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        uses: uraimo/run-on-arch-action@v2
+        with:
+          fetch-depth: 0
+          arch: aarch64
+          distro: ubuntu20.04
+
+        install: |
+          apt-get update -q -y
+          apt-get install -q -y	bash-completion autoconf automake bison build-essential clang doxygen flex g++ git libffi-dev libncurses5-dev libtool libsqlite3-dev make mcpp python sqlite zlib1g-dev cmake
+
+        run: |
+          cmake -S . -B ./build -DSOUFFLE_DOMAIN_64BIT=ON
+          cmake --build ./build --parallel "$(nproc)" --target package
+
+      - name: Naming Artifact
+        id: naming
+        run: |
+          rename 's/(.*\.deb)/aarch64-ubuntu20.04-$1/' build/*deb
+          echo "::set-output name=artifact_name::$(ls build/*deb | head -n1"
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: ${{ steps.naming.outputs.artifact_name }}
+          path: build/${{ steps.naming.outputs.artifact_name }}
+
+  CPack-Package-Build-Aarch64-Fedora:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        uses: uraimo/run-on-arch-action@v2
+        with:
+          fetch-depth: 0
+          arch: aarch64
+          distro: fedora_latest
+
+        install: |
+          dnf -y install autoconf automake bash-completion bison cmake doxygen flex gcc-c++ git libffi-devel libtool make mcpp ncurses-devel pkg-config python39 rpm-build sqlite-devel zlib-devel
+
+        run: |
+          cmake -S . -B ./build -DSOUFFLE_DOMAIN_64BIT=ON
+          cmake --build ./build --parallel "$(nproc)" --target package
+
+      - name: Naming Artifact
+        id: naming
+        run: |
+          rename "s/(.*\.rpm)/fedora-$(. /lib/os-release; echo $VERSION_ID)-$1/" build/*rpm
+          echo "::set-output name=artifact_name::$(ls build/*rpm | head -n1"
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: ${{ steps.naming.outputs.artifact_name }}
+          path: build/${{ steps.naming.outputs.artifact_name }}
+
   CPack-Package-Build:
     strategy:
       fail-fast: false
@@ -18,10 +79,6 @@ jobs:
           - release: fedora-34
             extension: ".rpm"
             OS-name: "fedora/34"
-          # build issue on fedora 35
-          # - release: fedora-35
-          #   extension: ".rpm"
-          #   OS-name: "fedora/35"
 
     runs-on: ubuntu-latest
     steps:

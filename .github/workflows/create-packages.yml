@@ -184,7 +184,7 @@ jobs:
             result/*
 
   Upload-Repo-Files:
-    needs: CPack-Package-Build
+    needs: [ CPack-Package-Build, CPack-Package-Build-Aarch64-Ubuntu, CPack-Package-Build-Aarch64-Fedora ]
     if: ${{ always() }}
 
     runs-on: ubuntu-18.04

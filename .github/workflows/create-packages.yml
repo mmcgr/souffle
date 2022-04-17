@@ -15,13 +15,13 @@ jobs:
           arch: aarch64
           distro: ubuntu20.04
 
-        install: |
-          apt-get update -q -y
-          apt-get install -q -y	bash-completion autoconf automake bison build-essential clang doxygen flex g++ git libffi-dev libncurses5-dev libtool libsqlite3-dev make mcpp python sqlite zlib1g-dev cmake
+          install: |
+            apt-get update -q -y
+            apt-get install -q -y	bash-completion autoconf automake bison build-essential clang doxygen flex g++ git libffi-dev libncurses5-dev libtool libsqlite3-dev make mcpp python sqlite zlib1g-dev cmake
 
-        run: |
-          cmake -S . -B ./build -DSOUFFLE_DOMAIN_64BIT=ON
-          cmake --build ./build --parallel "$(nproc)" --target package
+          run: |
+            cmake -S . -B ./build -DSOUFFLE_DOMAIN_64BIT=ON
+            cmake --build ./build --parallel "$(nproc)" --target package
 
       - name: Naming Artifact
         id: naming
@@ -46,12 +46,12 @@ jobs:
           arch: aarch64
           distro: fedora_latest
 
-        install: |
-          dnf -y install autoconf automake bash-completion bison cmake doxygen flex gcc-c++ git libffi-devel libtool make mcpp ncurses-devel pkg-config python39 rpm-build sqlite-devel zlib-devel
+          install: |
+            dnf -y install autoconf automake bash-completion bison cmake doxygen flex gcc-c++ git libffi-devel libtool make mcpp ncurses-devel pkg-config python39 rpm-build sqlite-devel zlib-devel
 
-        run: |
-          cmake -S . -B ./build -DSOUFFLE_DOMAIN_64BIT=ON
-          cmake --build ./build --parallel "$(nproc)" --target package
+          run: |
+            cmake -S . -B ./build -DSOUFFLE_DOMAIN_64BIT=ON
+            cmake --build ./build --parallel "$(nproc)" --target package
 
       - name: Naming Artifact
         id: naming

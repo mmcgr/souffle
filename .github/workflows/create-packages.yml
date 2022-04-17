@@ -7,7 +7,7 @@ jobs:
   CPack-Package-Build-Aarch64-Ubuntu:
     runs-on: ubuntu-latest
     steps:
-      -yyses: actions/checkout@v2
+      - uses: actions/checkout@v2
       - name: Checkout
         uses: uraimo/run-on-arch-action@v2
         with:

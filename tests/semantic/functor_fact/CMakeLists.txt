@@ -8,7 +8,7 @@ add_library(functor_fact SHARED functors.cpp)
 target_include_directories(functor_fact PRIVATE "${CMAKE_SOURCE_DIR}/src/include")
 
 target_compile_features(functor_fact
-                        PUBLIC cxx_std_17)
+                        PUBLIC cxx_std_20)
 
 set_target_properties(functor_fact PROPERTIES CXX_EXTENSIONS OFF)
 set_target_properties(functor_fact PROPERTIES OUTPUT_NAME "functors")

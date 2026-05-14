@@ -54,7 +54,7 @@ def main():
         cxx,
         "-I",
         include,
-        "--std=c++17",
+        "--std=c++20",
         "-D__EMBEDDED_SOUFFLE__=1",
     ]
     for dl in dls:

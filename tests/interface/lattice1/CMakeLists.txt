@@ -8,7 +8,7 @@ add_library(lattice1functors SHARED functors.cpp)
 target_include_directories(lattice1functors PRIVATE "${CMAKE_SOURCE_DIR}/src/include")
 
 target_compile_features(lattice1functors
-                        PUBLIC cxx_std_17)
+                        PUBLIC cxx_std_20)
 
 set_target_properties(lattice1functors PROPERTIES CXX_EXTENSIONS OFF)
 set_target_properties(lattice1functors PROPERTIES OUTPUT_NAME "functors")

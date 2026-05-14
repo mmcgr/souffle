@@ -111,13 +111,7 @@ constexpr bool is_range_v = is_range<A>::value;
 template <typename A>
 constexpr bool is_remove_ref_const = std::is_const_v<std::remove_reference_t<A>>;
 
-/**
- * Type identity, remove once we have C++20
- */
-template <typename T>
-struct type_identity {
-    using type = T;
-};
+using std::type_identity;
 
 /**
  * Remove cv ref, remove once we have C++ 20

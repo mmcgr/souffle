@@ -474,7 +474,7 @@ WS [ \t\r\v\f]
                                           auto code = driver.readFile(*maybePath, ec);
 
                                           if (ec) {
-                                            driver.error(yylloc, std::string("cannot read file ") + maybePath->u8string());
+                                            driver.error(yylloc, std::string("cannot read file ") + maybePath->string());
                                             return yy::parser::make_END(loc);
                                           }
 

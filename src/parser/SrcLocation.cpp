@@ -145,7 +145,7 @@ bool SrcLocation::isValid() const {
 void ScannerInfo::push(
         const std::filesystem::path& Physical, const SrcLocation& IncludeLoc, bool reducedWhitespaces) {
     auto NewFile = std::make_shared<IncludeStack>(
-            yylloc.file, IncludeLoc.start, Physical, Physical.u8string(), reducedWhitespaces);
+            yylloc.file, IncludeLoc.start, Physical, Physical.string(), reducedWhitespaces);
     Frames.push(yylloc);
     yylloc.file = NewFile;
     yylloc.start = yylloc.end = {1, 1};

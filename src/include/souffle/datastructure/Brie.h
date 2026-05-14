@@ -1701,7 +1701,7 @@ public:
         // not sacrifice too much performance.
 
         while (true) {
-            auto order = std::memory_order::memory_order_relaxed;
+            auto order = std::memory_order_relaxed;
 
             // load current value
             value_t old = val.load(order);
@@ -1719,7 +1719,7 @@ public:
 #endif
 #endif
 
-        value_t old = val.fetch_or(bit, std::memory_order::memory_order_relaxed);
+        value_t old = val.fetch_or(bit, std::memory_order_relaxed);
         return (old & bit) == 0u;
     }
 

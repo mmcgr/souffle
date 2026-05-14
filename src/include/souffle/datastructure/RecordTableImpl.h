@@ -17,7 +17,6 @@
 #include "souffle/RamTypes.h"
 #include "souffle/RecordTable.h"
 #include "souffle/datastructure/ConcurrentFlyweight.h"
-#include "souffle/utility/span.h"
 
 #include <cassert>
 #include <cstddef>

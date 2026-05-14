@@ -26,6 +26,7 @@
 #include <map>
 #include <memory>
 #include <ostream>
+#include <span>
 #include <string>
 
 namespace souffle {
@@ -71,8 +72,7 @@ protected:
 
     template <typename Tuple>
     void writeNext(const Tuple tuple) {
-        using tcb::make_span;
-        writeNextTuple(make_span(tuple).data());
+        writeNextTuple(std::span(tuple).data());
     }
 
     virtual void outputSymbol(std::ostream& destination, const std::string& value) {

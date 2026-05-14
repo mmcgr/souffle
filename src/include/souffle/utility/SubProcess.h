@@ -17,11 +17,11 @@
 #pragma once
 
 #include "souffle/utility/Types.h"
-#include "souffle/utility/span.h"
 #include <algorithm>
 #include <cassert>
 #include <cstdlib>
 #include <optional>
+#include <span>
 #include <type_traits>
 
 #ifdef _MSC_VER
@@ -61,10 +61,10 @@ using LinuxWaitStatus = int;
  *           NB: This is not the exit code, though the exit code can be obtained from it.
  *               However, you can do `execute(...) == 0` if you only care that it succeeded.
  */
-template <typename Envp = span<std::pair<char const*, char const*>>,
+template <typename Envp = std::span<std::pair<char const*, char const*>>,
         typename = std::enable_if_t<is_iterable_of<Envp, std::pair<char const*, char const*> const>>>
 std::optional<detail::LinuxWaitStatus> execute(
-        std::string const& program, span<char const* const> argv = {}, Envp&& envp = {}) {
+        std::string const& program, std::span<char const* const> argv = {}, Envp&& envp = {}) {
 #ifndef _MSC_VER
     using EC = detail::LinuxExitCode;
 
@@ -180,15 +180,15 @@ std::optional<detail::LinuxWaitStatus> execute(
  *           NB: This is not the exit code, though the exit code can be obtained from it.
  *               However, you can do `execute(...) == 0` if you only care that it succeeded.
  */
-template <typename Envp = span<std::pair<char const*, std::string>>,
+template <typename Envp = std::span<std::pair<char const*, std::string>>,
         typename = std::enable_if_t<is_iterable_of<Envp, std::pair<char const*, std::string> const>>>
 std::optional<detail::LinuxWaitStatus> execute(
-        std::string const& program, span<std::string const> argv, Envp&& envp = {}) {
+        std::string const& program, std::span<std::string const> argv, Envp&& envp = {}) {
     auto go = [](auto* dst, auto&& src, auto&& f) {
         size_t i = 0;
         for (auto&& x : src)
             dst[i++] = f(x);
-        return span<std::remove_pointer_t<decltype(dst)>>{dst, dst + src.size()};
+        return std::span<std::remove_pointer_t<decltype(dst)>>{dst, dst + src.size()};
     };
 
     std::unique_ptr<char const*[]> argv_temp = std::make_unique<char const*[]>(argv.size());

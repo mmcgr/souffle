@@ -31,7 +31,6 @@
 #include "souffle/utility/ContainerUtil.h"
 #include "souffle/utility/MiscUtil.h"
 #include "souffle/utility/StreamUtil.h"
-#include "souffle/utility/span.h"
 #include <algorithm>
 #include <atomic>
 #include <bitset>
@@ -42,6 +41,7 @@
 #include <iostream>
 #include <iterator>
 #include <limits>
+#include <span>
 #include <type_traits>
 #include <utility>
 #include <vector>
@@ -67,8 +67,6 @@ namespace detail::brie {
 // FIXME: These data structs should be parameterised/made agnostic to `RamDomain` type.
 using brie_element_type = RamDomain;
 
-using tcb::make_span;
-
 template <typename A>
 struct forward_non_output_iterator_traits {
     using value_type = A;
@@ -79,20 +77,20 @@ struct forward_non_output_iterator_traits {
 };
 
 template <typename A, std::size_t arity>
-auto copy(span<A, arity> s) {
+auto copy(std::span<A, arity> s) {
     std::array<std::decay_t<A>, arity> cpy;
     std::copy_n(s.begin(), arity, cpy.begin());
     return cpy;
 }
 
 template <std::size_t offset, typename A, std::size_t arity>
-auto drop(span<A, arity> s) -> std::enable_if_t<offset <= arity, span<A, arity - offset>> {
-    return {s.begin() + offset, s.end()};
+auto drop(std::span<A, arity> ss) -> std::enable_if_t<offset < arity, std::span<A, arity - offset>> {
+    return ss.template subspan<offset>();
 }
 
 template <typename C>
 auto tail(C& s) {
-    return drop<1>(make_span(s));
+    return drop<1>(std::span(s));
 }
 
 /**
@@ -2443,8 +2441,8 @@ struct fix_upper_bound {
 template <unsigned Dim>
 struct TrieTypes {
     using entry_type = std::array<brie_element_type, Dim>;
-    using entry_span_type = span<brie_element_type, Dim>;
-    using const_entry_span_type = span<const brie_element_type, Dim>;
+    using entry_span_type = std::span<brie_element_type, Dim>;
+    using const_entry_span_type = std::span<const brie_element_type, Dim>;
 
     // the type of the nested tries (1 dimension less)
     using nested_trie_type = Trie<Dim - 1>;
@@ -2562,8 +2560,8 @@ struct TrieTypes {
 template <>
 struct TrieTypes<1u> {
     using entry_type = std::array<brie_element_type, 1>;
-    using entry_span_type = span<brie_element_type, 1>;
-    using const_entry_span_type = span<const brie_element_type, 1>;
+    using entry_span_type = std::span<brie_element_type, 1>;
+    using const_entry_span_type = std::span<const brie_element_type, 1>;
 
     // the map type utilized internally
     using store_type = SparseBitMap<>;

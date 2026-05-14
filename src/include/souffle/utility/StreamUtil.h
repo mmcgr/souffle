@@ -20,6 +20,7 @@
 #include <memory>
 #include <ostream>
 #include <set>
+#include <span>
 #include <string>
 #include <type_traits>
 #include <unordered_map>
@@ -28,7 +29,6 @@
 #include <vector>
 
 #include "souffle/utility/ContainerUtil.h"
-#include "souffle/utility/span.h"
 
 // -------------------------------------------------------------------------------
 //                           General Print Utilities
@@ -267,7 +267,7 @@ ostream& operator<<(ostream& out, const vector<T, A>& v) {
  * are printable.
  */
 template <typename T, std::size_t E>
-ostream& operator<<(ostream& out, const souffle::span<T, E>& v) {
+ostream& operator<<(ostream& out, const std::span<T, E>& v) {
     return out << "[" << souffle::join(v) << "]";
 }
 

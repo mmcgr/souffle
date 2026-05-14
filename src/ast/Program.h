@@ -31,8 +31,8 @@
 #include "ast/utility/Utils.h"
 #include "souffle/utility/FunctionalUtil.h"
 #include "souffle/utility/Visitor.h"
-#include "souffle/utility/span.h"
 #include <iosfwd>
+#include <span>
 #include <vector>
 
 namespace souffle {
@@ -204,7 +204,7 @@ public:
      * It is not expected that there are useful cases where some are not owned, and it is often
      * symptomatic of a bug to try to remove a clause that isn't part of the program.
      */
-    void removeClauses(span<Clause const* const>);
+    void removeClauses(std::span<Clause const* const>);
 
     /**
      * Remove a directive by identity.

@@ -18,10 +18,10 @@
 #pragma once
 
 #include "souffle/RamTypes.h"
-#include "souffle/utility/span.h"
 
 #include <functional>
 #include <initializer_list>
+#include <span>
 
 namespace souffle {
 
@@ -51,7 +51,7 @@ RamDomain pack(RecordTableT&& recordTab, Tuple<RamDomain, Arity> const& tuple) {
 
 /** @brief helper to convert tuple to record reference for the synthesiser */
 template <class RecordTableT, std::size_t Arity>
-RamDomain pack(RecordTableT&& recordTab, span<const RamDomain, Arity> tuple) {
+RamDomain pack(RecordTableT&& recordTab, std::span<const RamDomain, Arity> tuple) {
     return recordTab.pack(tuple.data(), Arity);
 }
 

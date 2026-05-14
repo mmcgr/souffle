@@ -13,6 +13,7 @@
 #include "souffle/utility/ContainerUtil.h"
 #include "souffle/utility/StreamUtil.h"
 #include <cassert>
+#include <span>
 #include <utility>
 
 namespace souffle {
@@ -214,7 +215,7 @@ void Program::removeClause(const Clause& clause) {
     erase(relations, &RelationInfo::clauses, clause);
 }
 
-void Program::removeClauses(span<Clause const* const> clauses) {
+void Program::removeClauses(std::span<Clause const* const> clauses) {
     for (auto&& cl : clauses) {
         assert(cl);
         removeClause(*cl);

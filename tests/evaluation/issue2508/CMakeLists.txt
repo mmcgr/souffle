@@ -8,7 +8,7 @@ add_library(issue2508 SHARED functors.cpp)
 target_include_directories(issue2508 PRIVATE "${CMAKE_SOURCE_DIR}/src/include")
 
 target_compile_features(issue2508
-                        PUBLIC cxx_std_17)
+                        PUBLIC cxx_std_20)
 
 set_target_properties(issue2508 PROPERTIES CXX_EXTENSIONS OFF)
 set_target_properties(issue2508 PROPERTIES OUTPUT_NAME "functors")

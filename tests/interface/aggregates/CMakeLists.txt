@@ -8,7 +8,7 @@ add_library(afunctors SHARED functors.cpp)
 target_include_directories(afunctors PRIVATE "${CMAKE_SOURCE_DIR}/src/include")
 
 target_compile_features(afunctors
-                        PUBLIC cxx_std_17)
+                        PUBLIC cxx_std_20)
 
 set_target_properties(afunctors PROPERTIES
   CXX_EXTENSIONS OFF

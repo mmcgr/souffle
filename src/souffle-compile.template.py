@@ -9,7 +9,7 @@ if not JSON_DATA_TEXT:
       "compiler_version": "8.3.0",
       "msvc_version": "",
       "includes": "-I/usr/include",
-      "std_flag": "-std=c++17",
+      "std_flag": "-std=c++20",
       "cxx_flags": " -fopenmp",
       "cxx_link_flags": "",
       "release_cxx_flags": "-O3 ",

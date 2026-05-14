@@ -21,7 +21,7 @@ function(SOUFFLE_TEST_SEMANTIC_PRAGMA2_SETUP FILE SO_NAME)
     target_include_directories(${FILE} PRIVATE "${CMAKE_SOURCE_DIR}/src/include")
 
     target_compile_features(${FILE}
-                            PUBLIC cxx_std_17)
+                            PUBLIC cxx_std_20)
     set_target_properties(
         ${FILE}
         PROPERTIES

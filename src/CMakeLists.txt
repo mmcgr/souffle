@@ -227,9 +227,9 @@ add_library(compiled STATIC dummy.cpp)
 
 target_include_directories(compiled PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include")
 
-# Set C++ standard to C++17
-target_compile_features(libsouffle PUBLIC cxx_std_17)
-target_compile_features(compiled PUBLIC cxx_std_17)
+# Set C++ standard to C++20
+target_compile_features(libsouffle PUBLIC cxx_std_20)
+target_compile_features(compiled PUBLIC cxx_std_20)
 
 set_target_properties(libsouffle PROPERTIES CXX_EXTENSIONS OFF)
 set_target_properties(libsouffle PROPERTIES POSITION_INDEPENDENT_CODE ON)
@@ -380,9 +380,9 @@ add_executable(souffleprof
 target_include_directories(souffleprof PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
 install(TARGETS souffleprof DESTINATION bin)
 
-# Set C++ standard to C++17
+# Set C++ standard to C++20
 target_compile_features(souffleprof
-  PUBLIC cxx_std_17)
+  PUBLIC cxx_std_20)
 
 if (MSVC)
   target_compile_options(libsouffle PUBLIC /Zc:__cplusplus)
@@ -455,7 +455,7 @@ endif()
 set(SOUFFLE_COMPILED_CXX_COMPILER ${CMAKE_CXX_COMPILER})
 set(SOUFFLE_COMPILED_CXX_COMPILER_ID ${CMAKE_CXX_COMPILER_ID})
 set(SOUFFLE_COMPILED_CXX_COMPILER_VERSION ${CMAKE_CXX_COMPILER_VERSION})
-set(SOUFFLE_COMPILED_CXX_STANDARD ${CMAKE_CXX17_STANDARD_COMPILE_OPTION})
+set(SOUFFLE_COMPILED_CXX_STANDARD ${CMAKE_CXX20_STANDARD_COMPILE_OPTION})
 set(SOUFFLE_COMPILED_CXX_FLAGS ${CMAKE_CXX_FLAGS})
 set(SOUFFLE_COMPILED_CXX_LINK_FLAGS ${CMAKE_CXX_LINK_FLAGS})
 set(SOUFFLE_COMPILED_RELEASE_CXX_FLAGS ${CMAKE_CXX_FLAGS_RELEASE})

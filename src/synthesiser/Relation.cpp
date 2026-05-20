@@ -943,7 +943,7 @@ void IndirectRelation::generateTypeStruct(GenDb& db) {
     def << "std::vector<range<iterator>> Type::partition() const {\n";
     def << "std::vector<range<iterator>> res;\n";
     def << "for (const auto& cur : ind_" << masterIndex << ".getChunks(400)) {\n";
-    def << "    res.push_back(make_range(derefIter(cur.begin()), derefIter(cur.end())));\n";
+    def << "    res.push_back(make_range(std::forward<iterator>(cur.begin()), std::forward<iterator>(cur.end())));\n";
     def << "}\n";
     def << "return res;\n";
     def << "}\n";

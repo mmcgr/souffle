@@ -221,15 +221,6 @@ template <typename Iter>
 using IterDerefWrapper = TransformIterator<Iter, detail::IterTransformDeref>;
 
 /**
- * A factory function enabling the construction of a dereferencing
- * iterator utilizing the automated deduction of template parameters.
- */
-template <typename Iter>
-auto derefIter(Iter&& iter) {
-    return transformIter(std::forward<Iter>(iter), detail::IterTransformDeref{});
-}
-
-/**
  * A factory function that transforms an smart-ptr iter to dumb-ptr iter.
  */
 template <typename Iter>
@@ -337,11 +328,6 @@ auto makeTransformRange(Iter&& begin, Iter&& end, F const& f) {
 template <typename R, typename F>
 auto makeTransformRange(R&& range, F const& f) {
     return makeTransformRange(range.begin(), range.end(), f);
-}
-
-template <typename Iter>
-auto makeDerefRange(Iter&& begin, Iter&& end) {
-    return make_range(derefIter(std::forward<Iter>(begin)), derefIter(std::forward<Iter>(end)));
 }
 
 template <typename R>

@@ -493,13 +493,13 @@ public:
     /** Returns iterator pointing to the first type in the type set (only if not universal) */
     const_iterator begin() const {
         assert(!all && "Unable to enumerate universe.");
-        return derefIter(types.begin());
+        return types.begin();
     }
 
     /** Returns iterator pointing to the past-the-end type in the type set (only if not universal) */
     const_iterator end() const {
         assert(!all && "Unable to enumerate universe.");
-        return derefIter(types.end());
+        return types.end();
     }
 
     /** Checks whether the set is a subset */

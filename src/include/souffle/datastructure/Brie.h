@@ -52,7 +52,6 @@
  * When compiling for windows, redefine the gcc builtins which are used to
  * their equivalents on the windows platform.
  */
-#define __sync_synchronize MemoryBarrier
 #define __sync_bool_compare_and_swap(ptr, oldval, newval) \
     (InterlockedCompareExchangePointer((void* volatile*)ptr, (void*)newval, (void*)oldval) == (void*)oldval)
 #endif  // _WIN32
@@ -643,7 +642,7 @@ private:
         synced.offset = info.offset;
 
         // update root (and thus the version to enable future retrievals)
-        __sync_synchronize();
+        std::atomic_thread_fence(std::memory_order_seq_cst);
         synced.root = info.root;
 
         // done
@@ -709,7 +708,7 @@ private:
         synced.firstOffset = info.offset;
 
         // update node pointer (and thus the version number)
-        __sync_synchronize();
+        std::atomic_thread_fence(std::memory_order_seq_cst);
         synced.first = info.node;  // must be last (and atomic)
 
         // done
@@ -3068,6 +3067,5 @@ struct iterator_traits<TrieIterator<A, IterCore>> : forward_non_output_iterator_
 }  // namespace std
 
 #ifdef _WIN32
-#undef __sync_synchronize
 #undef __sync_bool_compare_and_swap
 #endif

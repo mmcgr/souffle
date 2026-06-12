@@ -1718,7 +1718,7 @@ TEST(Trie, Limits) {
 }
 
 TEST(Trie, Parallel) {
-    const int N = 10000;
+    const int N = 100000;
 
     std::default_random_engine randomGenerator(3);
     std::uniform_int_distribution<RamDomain> distribution(0, N - 1);
@@ -1730,7 +1730,7 @@ TEST(Trie, Parallel) {
     std::vector<entry_t> list;
     Trie<2> filter;
 
-    while (filter.size() < N) {
+    while (list.size() < N) {
         entry_t entry{(RamDomain)(rnd()), (RamDomain)(rnd())};
         if (filter.insert(entry)) {
             list.push_back(entry);

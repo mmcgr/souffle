@@ -28,8 +28,6 @@
 
 #include "souffle/RamTypes.h"
 #include "souffle/utility/CacheUtil.h"
-#include "souffle/utility/ContainerUtil.h"
-#include "souffle/utility/MiscUtil.h"
 #include "souffle/utility/StreamUtil.h"
 #include "souffle/utility/span.h"
 #include <algorithm>
@@ -45,16 +43,6 @@
 #include <type_traits>
 #include <utility>
 #include <vector>
-
-// TODO: replace intrinsics w/ std lib functions?
-#ifdef _WIN32
-/**
- * When compiling for windows, redefine the gcc builtins which are used to
- * their equivalents on the windows platform.
- */
-#define __sync_bool_compare_and_swap(ptr, oldval, newval) \
-    (InterlockedCompareExchangePointer((void* volatile*)ptr, (void*)newval, (void*)oldval) == (void*)oldval)
-#endif  // _WIN32
 
 namespace souffle {
 
@@ -378,28 +366,25 @@ private:
      */
     struct RootInfo {
         // the root node of the tree
-        Node* root;
+        std::atomic<Node*> root;
         // the number of levels of the tree
         uint32_t levels;
         // the absolute offset of the theoretical first element in the tree
         index_type offset;
 
         // the first leaf node in the tree
-        Node* first;
+        std::atomic<Node*> first;
         // the absolute offset of the first element in the first leaf node
         index_type firstOffset;
     };
 
-    union {
-        RootInfo unsynced;         // for sequential operations
-        volatile RootInfo synced;  // for synchronized operations
-    };
+    RootInfo synced;  // for synchronized operations
 
 public:
     /**
      * A default constructor creating an empty sparse array.
      */
-    SparseArray() : unsynced(RootInfo{nullptr, 0, 0, nullptr, std::numeric_limits<index_type>::max()}) {}
+    SparseArray() : synced(RootInfo{nullptr, 0, 0, nullptr, std::numeric_limits<index_type>::max()}) {}
 
     /**
      * A copy constructor for sparse arrays. It creates a deep
@@ -407,11 +392,11 @@ public:
      * array instance.
      */
     SparseArray(const SparseArray& other)
-            : unsynced(RootInfo{clone(other.unsynced.root, other.unsynced.levels), other.unsynced.levels,
-                      other.unsynced.offset, nullptr, other.unsynced.firstOffset}) {
-        if (unsynced.root) {
-            unsynced.root->parent = nullptr;
-            unsynced.first = findFirst(unsynced.root, unsynced.levels);
+            : synced(RootInfo{clone(other.synced.root, other.synced.levels), other.synced.levels,
+                      other.synced.offset, nullptr, other.synced.firstOffset}) {
+        if (synced.root != nullptr) {
+            synced.root.load()->parent = nullptr;
+            synced.first = findFirst(synced.root, synced.levels);
         }
     }
 
@@ -421,11 +406,11 @@ public:
      * handed in array.
      */
     SparseArray(SparseArray&& other)
-            : unsynced(RootInfo{other.unsynced.root, other.unsynced.levels, other.unsynced.offset,
-                      other.unsynced.first, other.unsynced.firstOffset}) {
-        other.unsynced.root = nullptr;
-        other.unsynced.levels = 0;
-        other.unsynced.first = nullptr;
+            : synced(RootInfo{other.synced.root, other.synced.levels, other.synced.offset,
+                      other.synced.first, other.synced.firstOffset}) {
+        other.synced.root = nullptr;
+        other.synced.levels = 0;
+        other.synced.first = nullptr;
     }
 
     /**
@@ -448,14 +433,16 @@ public:
         clean();
 
         // copy content
-        unsynced.levels = other.unsynced.levels;
-        unsynced.root = clone(other.unsynced.root, unsynced.levels);
-        if (unsynced.root) {
-            unsynced.root->parent = nullptr;
+        synced.levels = other.synced.levels;
+        synced.root = clone(other.synced.root, synced.levels);
+        if (synced.root != nullptr) {
+            synced.root.load()->parent = nullptr;
+            synced.first = findFirst(synced.root, synced.levels);
+        } else {
+            synced.first = nullptr;
         }
-        unsynced.offset = other.unsynced.offset;
-        unsynced.first = (unsynced.root) ? findFirst(unsynced.root, unsynced.levels) : nullptr;
-        unsynced.firstOffset = other.unsynced.firstOffset;
+        synced.offset = other.synced.offset;
+        synced.firstOffset = other.synced.firstOffset;
 
         // done
         return *this;
@@ -470,16 +457,16 @@ public:
         clean();
 
         // harvest content
-        unsynced.root = other.unsynced.root;
-        unsynced.levels = other.unsynced.levels;
-        unsynced.offset = other.unsynced.offset;
-        unsynced.first = other.unsynced.first;
-        unsynced.firstOffset = other.unsynced.firstOffset;
+        synced.root = other.synced.root.load();
+        synced.levels = other.synced.levels;
+        synced.offset = other.synced.offset;
+        synced.first = other.synced.first.load();
+        synced.firstOffset = other.synced.firstOffset;
 
         // reset other
-        other.unsynced.root = nullptr;
-        other.unsynced.levels = 0;
-        other.unsynced.first = nullptr;
+        other.synced.root = nullptr;
+        other.synced.levels = 0;
+        other.synced.first = nullptr;
 
         // done
         return *this;
@@ -490,7 +477,7 @@ public:
      * contains default-values, or not.
      */
     bool empty() const {
-        return unsynced.root == nullptr;
+        return synced.root == nullptr;
     }
 
     /**
@@ -540,8 +527,8 @@ public:
         std::size_t res = sizeof(*this);
 
         // add nodes
-        if (unsynced.root) {
-            res += getMemoryUsage(unsynced.root, unsynced.levels);
+        if (synced.root != nullptr) {
+            res += getMemoryUsage(synced.root, synced.levels);
         }
 
         // done
@@ -554,10 +541,10 @@ public:
      */
     void clear() {
         clean();
-        unsynced.root = nullptr;
-        unsynced.levels = 0;
-        unsynced.first = nullptr;
-        unsynced.firstOffset = std::numeric_limits<index_type>::max();
+        synced.root = nullptr;
+        synced.levels = 0;
+        synced.first = nullptr;
+        synced.firstOffset = std::numeric_limits<index_type>::max();
     }
 
     /**
@@ -594,7 +581,7 @@ private:
      */
     uint64_t getRootVersion() const {
         // here it is assumed that the load of a 64-bit word is atomic
-        return (uint64_t)synced.root;
+        return (uint64_t)synced.root.load();
     }
 
     /**
@@ -610,7 +597,7 @@ private:
             } while (res.version % 2);
 
             // then the rest
-            res.root = synced.root;
+            res.root = (Node*)res.version;
             res.levels = synced.levels;
             res.offset = synced.offset;
 
@@ -632,10 +619,10 @@ private:
      */
     bool tryUpdateRootInfo(const RootInfoSnapshot& info) {
         // check mod counter
-        uintptr_t version = info.version;
+        Node* version = (Node*)info.version;
 
         // update root to invalid pointer (ending with 1)
-        if (!__sync_bool_compare_and_swap(&synced.root, (Node*)version, (Node*)(version + 1))) {
+        if (!synced.root.compare_exchange_strong(version, (Node*)(info.version + 1))) {
             return false;
         }
 
@@ -668,7 +655,7 @@ private:
      */
     uint64_t getFirstVersion() const {
         // here it is assumed that the load of a 64-bit word is atomic
-        return (uint64_t)synced.first;
+        return (uint64_t)synced.first.load();
     }
 
     /**
@@ -683,7 +670,7 @@ private:
             } while (res.version % 2);
 
             // collect the values
-            res.node = synced.first;
+            res.node = (Node*)res.version;
             res.offset = synced.firstOffset;
 
         } while (res.version != getFirstVersion());
@@ -699,10 +686,10 @@ private:
      */
     bool tryUpdateFirstInfo(const FirstInfoSnapshot& info) {
         // check mod counter
-        uintptr_t version = info.version;
+        Node* version = (Node*)info.version;
 
-        // temporary update first pointer to point to uneven value (lock-out)
-        if (!__sync_bool_compare_and_swap(&synced.first, (Node*)version, (Node*)(version + 1))) {
+        // update first to invalid pointer (ending with 1)
+        if (!synced.first.compare_exchange_strong(version, (Node*)(info.version + 1))) {
             return false;
         }
 
@@ -864,7 +851,7 @@ private:
                         auto off = i & ~INDEX_MASK;
 
                         // fast over-approximation of whether a update is necessary
-                        if (off < unsynced.firstOffset) {
+                        if (off < synced.firstOffset) {
                             // update first reference if this one is the smallest
                             auto first_info = getFirstInfo();
                             while (off < first_info.offset) {
@@ -939,7 +926,7 @@ public:
      */
     value_type lookup(index_type i, op_context& ctxt) const {
         // check whether it is empty
-        if (!unsynced.root) return default_factory<value_type>()();
+        if (synced.root == nullptr) return default_factory<value_type>()();
 
         // check boundaries
         if (!inBoundaries(i)) return default_factory<value_type>()();
@@ -950,8 +937,8 @@ public:
         }
 
         // navigate to value
-        Node* node = unsynced.root;
-        unsigned level = unsynced.levels;
+        Node* node = synced.root;
+        unsigned level = synced.levels;
         while (level != 0) {
             // get X coordinate
             auto x = getIndex(brie_element_type(i), level);
@@ -1036,39 +1023,39 @@ public:
         }
 
         // adjust levels
-        while (unsynced.levels < other.unsynced.levels || !inBoundaries(other.unsynced.offset)) {
+        while (synced.levels < other.synced.levels || !inBoundaries(other.synced.offset)) {
             raiseLevel();
         }
 
         // navigate to root node equivalent of the other node in this tree
-        auto level = unsynced.levels;
-        Node** node = &unsynced.root;
-        while (level > other.unsynced.levels) {
+        auto level = synced.levels;
+        Node* node = synced.root;
+        while (level > other.synced.levels) {
             // get X coordinate
-            auto x = getIndex(brie_element_type(other.unsynced.offset), level);
+            auto x = getIndex(brie_element_type(other.synced.offset), level);
 
             // decrease level counter
             --level;
 
             // check next node
-            Node*& next = (*node)->cell[x].ptr;
-            if (!next) {
+            Node*& next = node->cell[x].ptr;
+            if (next == nullptr) {
                 // create new sub-tree
                 next = newNode();
-                next->parent = *node;
+                next->parent = node;
             }
 
             // continue one level below
-            node = &next;
+            node = next;
         }
 
         // merge sub-branches from here
-        merge((*node)->parent, *node, other.unsynced.root, level);
+        merge(node->parent, node, other.synced.root, level);
 
         // update first
-        if (unsynced.firstOffset > other.unsynced.firstOffset) {
-            unsynced.first = findFirst(*node, level);
-            unsynced.firstOffset = other.unsynced.firstOffset;
+        if (synced.firstOffset > other.synced.firstOffset) {
+            synced.first = findFirst(node, level);
+            synced.firstOffset = other.synced.firstOffset;
         }
     }
 
@@ -1083,7 +1070,11 @@ public:
      * case there are no such elements.
      */
     iterator begin() const {
-        return iterator(unsynced.first, unsynced.firstOffset);
+        if (synced.first == nullptr) {
+            // Use an explicit nullptr to help deduction
+            return iterator(nullptr, synced.firstOffset);
+        }
+        return iterator(synced.first, synced.firstOffset);
     }
 
     /**
@@ -1111,7 +1102,7 @@ public:
      */
     iterator find(index_type i, op_context& ctxt) const {
         // check whether it is empty
-        if (!unsynced.root) return end();
+        if (synced.root == nullptr) return end();
 
         // check boundaries
         if (!inBoundaries(i)) return end();
@@ -1130,8 +1121,8 @@ public:
         }
 
         // navigate to value
-        Node* node = unsynced.root;
-        unsigned level = unsynced.levels;
+        Node* node = synced.root;
+        unsigned level = synced.levels;
         while (level != 0) {
             // get X coordinate
             auto x = getIndex(i, level);
@@ -1178,14 +1169,14 @@ public:
      */
     iterator lowerBound(index_type i, op_context&) const {
         // check whether it is empty
-        if (!unsynced.root) return end();
+        if (synced.root == nullptr) return end();
 
         // check boundaries
         if (!inBoundaries(i)) {
             // if it is on the lower end, return minimum result
-            if (i < unsynced.offset) {
-                const auto& value = unsynced.first->cell[0].value;
-                auto res = iterator(unsynced.first, std::make_pair(unsynced.offset, value));
+            if (i < synced.offset) {
+                const auto& value = synced.first.load()->cell[0].value;
+                auto res = iterator(synced.first, std::make_pair(synced.offset, value));
                 if (value == value_type()) {
                     ++res;
                 }
@@ -1196,8 +1187,8 @@ public:
         }
 
         // navigate to value
-        Node* node = unsynced.root;
-        unsigned level = unsynced.levels;
+        Node* node = synced.root;
+        unsigned level = synced.levels;
         while (true) {
             // get X coordinate
             auto x = getIndex(brie_element_type(i), level);
@@ -1293,15 +1284,15 @@ public:
      * A debug utility printing the internal structure of this sparse array to the given output stream.
      */
     void dump(bool detail = false, std::ostream& out = std::cout) const {
-        if (!unsynced.root) {
+        if (synced.root == nullptr) {
             out << " - empty - \n";
             return;
         }
-        out << "root:  " << unsynced.root << "\n";
-        out << "offset: " << unsynced.offset << "\n";
-        out << "first: " << unsynced.first << "\n";
-        out << "fist offset: " << unsynced.firstOffset << "\n";
-        dump(detail, out, *unsynced.root, unsynced.levels, unsynced.offset);
+        out << "root:  " << synced.root.load() << "\n";
+        out << "offset: " << synced.offset << "\n";
+        out << "first: " << synced.first.load() << "\n";
+        out << "fist offset: " << synced.firstOffset << "\n";
+        dump(detail, out, *synced.root.load(), synced.levels, synced.offset);
     }
 
 private:
@@ -1333,9 +1324,9 @@ private:
      * Conducts a cleanup of the internal tree structure.
      */
     void clean() {
-        freeNodes(unsynced.root, unsynced.levels);
-        unsynced.root = nullptr;
-        unsynced.levels = 0;
+        freeNodes(synced.root, synced.levels);
+        synced.root = nullptr;
+        synced.levels = 0;
     }
 
     /**
@@ -1400,25 +1391,25 @@ private:
      */
     void raiseLevel() {
         // something went wrong when we pass that line
-        assert(unsynced.levels < (sizeof(index_type) * 8 / BITS) + 1);
+        assert(synced.levels < (sizeof(index_type) * 8 / BITS) + 1);
 
         // create new root
         Node* node = newNode();
         node->parent = nullptr;
 
         // insert existing root as child
-        auto x = getIndex(brie_element_type(unsynced.offset), unsynced.levels + 1);
-        node->cell[x].ptr = unsynced.root;
+        auto x = getIndex(brie_element_type(synced.offset), synced.levels + 1);
+        node->cell[x].ptr = synced.root;
 
         // swap the root
-        unsynced.root->parent = node;
+        synced.root.load()->parent = node;
 
         // update root
-        unsynced.root = node;
-        ++unsynced.levels;
+        synced.root = node;
+        ++synced.levels;
 
         // update offset be removing additional bits
-        unsynced.offset &= getLevelMask(unsynced.levels + 1);
+        synced.offset &= getLevelMask(synced.levels + 1);
     }
 
     /**
@@ -1462,7 +1453,7 @@ private:
      * by the hight and offset of the internally maintained tree.
      */
     bool inBoundaries(index_type a) const {
-        return inBoundaries(a, unsynced.levels, unsynced.offset);
+        return inBoundaries(a, synced.levels, synced.offset);
     }
 
     /**
@@ -3068,6 +3059,3 @@ struct iterator_traits<TrieIterator<A, IterCore>> : forward_non_output_iterator_
 
 }  // namespace std
 
-#ifdef _WIN32
-#undef __sync_bool_compare_and_swap
-#endif

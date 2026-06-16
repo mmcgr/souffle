@@ -2823,7 +2823,7 @@ public:
 
             // update context
             static_assert(std::tuple_size_v<decltype(ctxt.lastBoundaryRequest)> == Dim);
-            static_assert(std::tuple_size_v<decltype(entry)> == Dim);
+            static_assert(entry.size() == Dim);
             ctxt.lastBoundaryLevels = levels;
             std::copy_n(entry.begin(), Dim, ctxt.lastBoundaryRequest.begin());
             ctxt.lastBoundaries = make_range(begin, end);

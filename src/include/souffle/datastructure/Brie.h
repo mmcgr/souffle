@@ -1697,10 +1697,11 @@ public:
         value_t bit = (1ull << (i & LEAF_INDEX_MASK));
 
 #ifdef __GNUC__
-#if __GNUC__ >= 7
+#if __GNUC__ >= 7 && __GNUC__ < 12
         // In GCC >= 7 the usage of fetch_or causes a bug that needs further investigation
         // For now, this two-instruction based implementation provides a fix that does
         // not sacrifice too much performance.
+        // This is no longer reproducible in GCC 12 or later.
 
         while (true) {
             auto order = std::memory_order::memory_order_relaxed;

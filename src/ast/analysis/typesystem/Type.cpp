@@ -437,6 +437,10 @@ bool TypeAnalysis::analyseAggregators(const TranslationUnit& translationUnit) {
                 setAggregatorType(agg, TypeAttribute::Float);
             } else if (isUnsigned(targetExpression)) {
                 setAggregatorType(agg, TypeAttribute::Unsigned);
+            } else if (isSigned(targetExpression)) {
+                setAggregatorType(agg, TypeAttribute::Signed);
+            } else if (isSymbol(targetExpression)) {
+                setAggregatorType(agg, TypeAttribute::Symbol);
             } else {
                 setAggregatorType(agg, TypeAttribute::Signed);
             }
@@ -503,6 +507,10 @@ bool TypeAnalysis::isFloat(const Argument* argument) const {
 
 bool TypeAnalysis::isUnsigned(const Argument* argument) const {
     return isOfKind(getTypes(argument), TypeAttribute::Unsigned);
+}
+
+bool TypeAnalysis::isSigned(const Argument* argument) const {
+    return isOfKind(getTypes(argument), TypeAttribute::Signed);
 }
 
 bool TypeAnalysis::isSymbol(const Argument* argument) const {

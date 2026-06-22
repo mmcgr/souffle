@@ -684,7 +684,12 @@ void TypeCheckerImpl::visit_(type_identity<IntrinsicAggregator>, const Intrinsic
 
     // Check if operation type and return type agree.
     if (!isOfKind(aggregatorType, opType)) {
-        report.addError("Couldn't assign types to the aggregator", aggregator.getSrcLoc());
+        std::stringstream ss;
+        ss << "aggregator = " << aggregator.getBaseOperatorName();
+        ss << ", op = " << op << ", opType = " << opType << ", aggType = ";
+        ss << aggregatorType;
+        std::string types = ss.str();
+        report.addError("Couldn't assign types to the aggregator:" + types, aggregator.getSrcLoc());
     }
 }
 

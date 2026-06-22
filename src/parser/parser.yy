@@ -1133,8 +1133,10 @@ arg
         switch (op) {
           case AggregateOp::COUNT : return {};
           case AggregateOp::MAX   : return "max";
+          case AggregateOp::SMAX  : return "max";
           case AggregateOp::MEAN  : return {};
           case AggregateOp::MIN   : return "min";
+          case AggregateOp::SMIN  : return "min";
           case AggregateOp::SUM   : return {};
           default                 :
             fatal("missing base op handler, or got an overload op?");

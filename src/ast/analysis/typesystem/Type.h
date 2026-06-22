@@ -150,6 +150,7 @@ private:
 
     bool isFloat(const Argument* argument) const;
     bool isUnsigned(const Argument* argument) const;
+    bool isSigned(const Argument* argument) const;
     bool isSymbol(const Argument* argument) const;
 
     /** Convert a qualified name to its type */

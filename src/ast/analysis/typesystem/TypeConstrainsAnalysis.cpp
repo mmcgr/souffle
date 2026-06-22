@@ -245,9 +245,8 @@ void TypeConstraintsAnalysis::visit_(type_identity<IntrinsicAggregator>, const I
         addConstraint(isSubtypeOf(getVar(agg), typeEnv.getConstantType(TypeAttribute::Signed)));
     } else if (agg.getBaseOperator() == AggregateOp::MEAN) {
         addConstraint(isSubtypeOf(getVar(agg), typeEnv.getConstantType(TypeAttribute::Float)));
-    } else {
-        addConstraint(hasSuperTypeInSet(getVar(agg), typeEnv.getConstantNumericTypes()));
     }
+    // min/max can be symbol or numeric types
 
     // If there is a target expression - it should be of the same type as the aggregator.
     if (auto expr = agg.getTargetExpression()) {

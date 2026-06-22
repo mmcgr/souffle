@@ -47,9 +47,11 @@ public:
     void print(std::ostream& os, int /* tabpos */) const override {
         switch (function) {
             case AggregateOp::MIN:
+            case AggregateOp::SMIN:
             case AggregateOp::FMIN:
             case AggregateOp::UMIN: os << "min "; break;
             case AggregateOp::MAX:
+            case AggregateOp::SMAX:
             case AggregateOp::UMAX:
             case AggregateOp::FMAX: os << "max "; break;
             case AggregateOp::SUM:

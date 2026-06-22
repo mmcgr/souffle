@@ -39,6 +39,9 @@ enum class AggregateOp {
     UMIN,
     USUM,
 
+    SMAX,
+    SMIN,
+
     COUNT,
 };
 
@@ -50,10 +53,12 @@ inline std::ostream& operator<<(std::ostream& os, AggregateOp op) {
 
         case AggregateOp::MAX:
         case AggregateOp::UMAX:
+        case AggregateOp::SMAX:
         case AggregateOp::FMAX: return os << "max";
 
         case AggregateOp::MIN:
         case AggregateOp::UMIN:
+        case AggregateOp::SMIN:
         case AggregateOp::FMIN: return os << "min";
 
         case AggregateOp::SUM:
@@ -76,6 +81,8 @@ inline std::pair<uint8_t, uint8_t> aggregateArity(AggregateOp op) {
         case AggregateOp::MEAN:
         case AggregateOp::MIN:
         case AggregateOp::SUM:
+        case AggregateOp::SMAX:
+        case AggregateOp::SMIN:
         case AggregateOp::UMAX:
         case AggregateOp::UMIN:
         case AggregateOp::USUM: return {1, 1};
@@ -102,6 +109,9 @@ inline TypeAttribute getTypeAttributeAggregate(const AggregateOp op) {
         case AggregateOp::UMAX:
         case AggregateOp::UMIN:
         case AggregateOp::USUM: return TypeAttribute::Unsigned;
+
+        case AggregateOp::SMAX:
+        case AggregateOp::SMIN: return TypeAttribute::Symbol;
     }
 
     UNREACHABLE_BAD_CASE_ANALYSIS
@@ -125,6 +135,10 @@ inline bool isOverloadedAggregator(const AggregateOp op) {
  * Eg. sum, float → fsum.
  **/
 inline AggregateOp convertOverloadedAggregator(const AggregateOp op, const TypeAttribute type) {
+    if (type == TypeAttribute::Symbol) {
+        if (op == AggregateOp::MIN) return AggregateOp::SMIN;
+        if (op == AggregateOp::MAX) return AggregateOp::SMAX;
+    }
 #define CASE_NUMERIC(op)                                                \
     case AggregateOp::op:                                               \
         if (type == TypeAttribute::Signed) return AggregateOp::op;      \

@@ -635,9 +635,11 @@ NullableVector<Argument*> getInlinedArgument(Program& program, const Argument* a
                     auto aggregateToFunctor = [](AggregateOp op) {
                         switch (op) {
                             case AggregateOp::MIN:
+                            case AggregateOp::SMIN:
                             case AggregateOp::FMIN:
                             case AggregateOp::UMIN: return "min";
                             case AggregateOp::MAX:
+                            case AggregateOp::SMAX:
                             case AggregateOp::FMAX:
                             case AggregateOp::UMAX: return "max";
                             case AggregateOp::SUM:

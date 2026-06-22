@@ -1141,9 +1141,11 @@ void Synthesiser::emitCode(std::ostream& out, const Statement& stmt) {
             if (const auto* ia = as<ram::IntrinsicAggregator>(aggregator)) {
                 switch (ia->getFunction()) {
                     case AggregateOp::MIN: return "MAX_RAM_SIGNED";
+                    case AggregateOp::SMIN: return "0"; // Placeholder
                     case AggregateOp::FMIN: return "MAX_RAM_FLOAT";
                     case AggregateOp::UMIN: return "MAX_RAM_UNSIGNED";
                     case AggregateOp::MAX: return "MIN_RAM_SIGNED";
+                    case AggregateOp::SMAX: return "0"; // Placeholder
                     case AggregateOp::FMAX: return "MIN_RAM_FLOAT";
                     case AggregateOp::UMAX: return "MIN_RAM_UNSIGNED";
                     case AggregateOp::COUNT:
@@ -1167,6 +1169,16 @@ void Synthesiser::emitCode(std::ostream& out, const Statement& stmt) {
                 AggregateOp aggregateFun = ia->getFunction();
                 std::string type = getType(aggregator);
                 switch (aggregateFun) {
+                    case AggregateOp::SMAX:
+                        out << "res0 = symTable.encode(std::max(symTable.decode(res0), symTable.decode(";
+                        dispatch(aggregate.getExpression(), out);
+                        out << ")));\n";
+                        break;
+                    case AggregateOp::SMIN:
+                        out << "res0 = symTable.encode(std::min(symTable.decode(res0), symTable.decode(";
+                        dispatch(aggregate.getExpression(), out);
+                        out << ")));\n";
+                        break;
                     case AggregateOp::FMIN:
                     case AggregateOp::UMIN:
                     case AggregateOp::MIN:
@@ -1336,7 +1348,15 @@ void Synthesiser::emitCode(std::ostream& out, const Statement& stmt) {
 
             std::string type = getType(aggregator);
 
-            out << type << " res0 = " << init << ";\n";
+            if (const auto* ia = as<ram::IntrinsicAggregator>(aggregator)) {
+                if (ia->getFunction() == AggregateOp::SMIN || ia->getFunction() == AggregateOp::SMAX) {
+                    out << "env0 = *(relName->begin());\n";
+                    out << type << " res0 = symTable.encode(";
+                    dispatch(aggregate.getExpression(), out);
+                } else {
+                    out << type << " res0 = " << init << ";\n";
+                };
+            }
             ifIntrinsic(aggregator, AggregateOp::MEAN, [&]() {
                 out << "RamUnsigned res1 = 0;\n";
                 sharedVariable += ", res1";

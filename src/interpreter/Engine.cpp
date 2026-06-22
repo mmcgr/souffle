@@ -1925,9 +1925,11 @@ RamDomain Engine::initValue(const ram::Aggregator& aggregator, const Shadow& sha
         switch (ia->getFunction()) {
             case AggregateOp::MIN: return ramBitCast(MAX_RAM_SIGNED);
             case AggregateOp::UMIN: return ramBitCast(MAX_RAM_UNSIGNED);
+            case AggregateOp::SMIN: return ramBitCast(MAX_RAM_UNSIGNED);
             case AggregateOp::FMIN: return ramBitCast(MAX_RAM_FLOAT);
             case AggregateOp::MAX: return ramBitCast(MIN_RAM_SIGNED);
             case AggregateOp::UMAX: return ramBitCast(MIN_RAM_UNSIGNED);
+            case AggregateOp::SMAX: return ramBitCast(MIN_RAM_UNSIGNED);
             case AggregateOp::FMAX: return ramBitCast(MIN_RAM_FLOAT);
             case AggregateOp::SUM: return ramBitCast(static_cast<RamSigned>(0));
             case AggregateOp::USUM: return ramBitCast(static_cast<RamUnsigned>(0));
@@ -2013,6 +2015,9 @@ RamDomain Engine::evalAggregate(
                 case AggregateOp::UMIN:
                     res = ramBitCast(std::min(ramBitCast<RamUnsigned>(res), ramBitCast<RamUnsigned>(val)));
                     break;
+                case AggregateOp::SMIN:
+                    res = 1;
+                    break;
 
                 case AggregateOp::MAX: res = std::max(res, val); break;
                 case AggregateOp::FMAX:
@@ -2020,6 +2025,9 @@ RamDomain Engine::evalAggregate(
                     break;
                 case AggregateOp::UMAX:
                     res = ramBitCast(std::max(ramBitCast<RamUnsigned>(res), ramBitCast<RamUnsigned>(val)));
+                    break;
+                case AggregateOp::SMAX:
+                    res = 1;
                     break;
 
                 case AggregateOp::SUM: res += val; break;

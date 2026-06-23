@@ -23,6 +23,7 @@
 #include "souffle/utility/MiscUtil.h"
 #include "souffle/utility/ParallelUtil.h"
 #include <algorithm>
+#include <atomic>
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
@@ -108,29 +109,19 @@ protected:
      * book-keeping information.
      */
     struct base {
-#ifdef IS_PARALLEL
-
         // the parent node
-        node* volatile parent;
+        std::atomic<node*> parent;
 
+#ifdef IS_PARALLEL
         // a lock for synchronizing parallel operations on this node
         lock_type lock;
-
-        // the number of keys in this node
-        volatile size_type numElements;
-
-        // the position in the parent node
-        volatile field_index_type position;
-#else
-        // the parent node
-        node* parent;
-
-        // the number of keys in this node
-        size_type numElements;
-
-        // the position in the parent node
-        field_index_type position;
 #endif
+
+        // the number of keys in this node
+        std::atomic<size_type> numElements;
+
+        // the position in the parent node
+        std::atomic<field_index_type> position;
 
         // a flag indicating whether this is a inner node or not
         const bool inner;
@@ -194,8 +185,8 @@ protected:
                                           : static_cast<node*>(new leaf_node());
 
             // copy basic fields
-            res->position = this->position;
-            res->numElements = this->numElements;
+            res->position.store(this->position);
+            res->numElements.store(this->numElements);
 
             for (size_type i = 0; i < this->numElements; ++i) {
                 res->keys[i] = this->keys[i];
@@ -347,14 +338,14 @@ protected:
          * @param idx  .. the position of the insert causing the split
          */
 #ifdef IS_PARALLEL
-        void split(node** root, lock_type& root_lock, int idx, std::vector<node*>& locked_nodes) {
+        void split(std::atomic<node*>& root, lock_type& root_lock, int idx, std::vector<node*>& locked_nodes) {
             assert(this->lock.is_write_locked());
-            assert(!this->parent || this->parent->lock.is_write_locked());
+            assert((this->parent == nullptr) || this->parent.load()->lock.is_write_locked());
             assert((this->parent != nullptr) || root_lock.is_write_locked());
             assert(this->isLeaf() || souffle::contains(locked_nodes, this));
-            assert(!this->parent || souffle::contains(locked_nodes, const_cast<node*>(this->parent)));
+            assert((this->parent == nullptr) || souffle::contains(locked_nodes, this->parent));
 #else
-        void split(node** root, lock_type& root_lock, int idx) {
+        void split(std::atomic<node*>& root, lock_type& root_lock, int idx) {
 #endif
             assert(this->numElements == maxKeys);
 
@@ -412,22 +403,22 @@ protected:
          */
         // TODO: remove root_lock ... no longer needed
 #ifdef IS_PARALLEL
-        int rebalance_or_split(node** root, lock_type& root_lock, int idx, std::vector<node*>& locked_nodes) {
+        int rebalance_or_split(std::atomic<node*>& root, lock_type& root_lock, int idx, std::vector<node*>& locked_nodes) {
             assert(this->lock.is_write_locked());
-            assert(!this->parent || this->parent->lock.is_write_locked());
+            assert((this->parent == nullptr) || this->parent.load()->lock.is_write_locked());
             assert((this->parent != nullptr) || root_lock.is_write_locked());
             assert(this->isLeaf() || souffle::contains(locked_nodes, this));
-            assert(!this->parent || souffle::contains(locked_nodes, const_cast<node*>(this->parent)));
+            assert((this->parent == nullptr) || souffle::contains(locked_nodes, this->parent));
 #else
-        int rebalance_or_split(node** root, lock_type& root_lock, int idx) {
+        int rebalance_or_split(std::atomic<node*>& root, lock_type& root_lock, int idx) {
 #endif
 
             // this node is full ... and needs some space
             assert(this->numElements == maxKeys);
 
             // get snap-shot of parent
-            auto parent = this->parent;
-            auto pos = this->position;
+            auto parent = this->parent.load();
+            auto pos = this->position.load();
 
             // Option A) re-balance data
             if (parent && pos > 0) {
@@ -527,18 +518,18 @@ protected:
          * @param sibling .. the new right-sibling to be add to the parent node
          */
 #ifdef IS_PARALLEL
-        void grow_parent(node** root, lock_type& root_lock, node* sibling, std::vector<node*>& locked_nodes) {
+        void grow_parent(std::atomic<node*>& root, lock_type& root_lock, node* sibling, std::vector<node*>& locked_nodes) {
             assert(this->lock.is_write_locked());
-            assert(!this->parent || this->parent->lock.is_write_locked());
+            assert((this->parent == nullptr) || this->parent.load()->lock.is_write_locked());
             assert((this->parent != nullptr) || root_lock.is_write_locked());
             assert(this->isLeaf() || souffle::contains(locked_nodes, this));
-            assert(!this->parent || souffle::contains(locked_nodes, const_cast<node*>(this->parent)));
+            assert((this->parent == nullptr) || souffle::contains(locked_nodes, this->parent));
 #else
-        void grow_parent(node** root, lock_type& root_lock, node* sibling) {
+        void grow_parent(std::atomic<node*>& root, lock_type& root_lock, node* sibling) {
 #endif
 
             if (this->parent == nullptr) {
-                assert(*root == this);
+                assert(root == this);
 
                 // create a new root node
                 auto* new_root = new inner_node();
@@ -554,12 +545,12 @@ protected:
                 sibling->position = 1;
 
                 // switch root node
-                *root = new_root;
+                root = new_root;
 
             } else {
                 // insert new element in parent element
-                auto parent = this->parent;
-                auto pos = this->position;
+                auto parent = this->parent.load();
+                auto pos = this->position.load();
 
 #ifdef IS_PARALLEL
                 parent->insert_inner(
@@ -579,21 +570,21 @@ protected:
          * @param newNode .. the new right-child of the inserted key
          */
 #ifdef IS_PARALLEL
-        void insert_inner(node** root, lock_type& root_lock, unsigned pos, node* predecessor, const Key& key,
+        void insert_inner(std::atomic<node*>& root, lock_type& root_lock, unsigned pos, node* predecessor, const Key& key,
                 node* newNode, std::vector<node*>& locked_nodes) {
             assert(this->lock.is_write_locked());
             assert(souffle::contains(locked_nodes, this));
 #else
-        void insert_inner(node** root, lock_type& root_lock, unsigned pos, node* predecessor, const Key& key,
+        void insert_inner(std::atomic<node*>& root, lock_type& root_lock, unsigned pos, node* predecessor, const Key& key,
                 node* newNode) {
 #endif
 
             // check capacity
             if (this->numElements >= maxKeys) {
 #ifdef IS_PARALLEL
-                assert(!this->parent || this->parent->lock.is_write_locked());
-                assert((this->parent) || root_lock.is_write_locked());
-                assert(!this->parent || souffle::contains(locked_nodes, const_cast<node*>(this->parent)));
+                assert((this->parent == nullptr) || this->parent.load()->lock.is_write_locked());
+                assert((this->parent != nullptr) || root_lock.is_write_locked());
+                assert((this->parent == nullptr) || souffle::contains(locked_nodes, this->parent));
 #endif
 
                 // split this node
@@ -609,7 +600,7 @@ protected:
                     pos = pos - static_cast<unsigned int>(this->numElements) - 1;
 
                     // get new sibling
-                    auto other = this->parent->getChild(this->position + 1);
+                    auto other = this->parent.load()->getChild(this->position + 1);
 
 #ifdef IS_PARALLEL
                     // make sure other side is write locked
@@ -798,39 +789,39 @@ protected:
                 }
             } else {
                 // check parent relation
-                if (!this->parent) {
+                if (this->parent == nullptr) {
                     std::cout << "Invalid null-parent!\n";
                     valid = false;
                 } else {
-                    if (this->parent->getChildren()[this->position] != this) {
+                    if (this->parent.load()->getChildren()[this->position] != this) {
                         std::cout << "Parent reference invalid!\n";
                         std::cout << "   Node:     " << this << "\n";
-                        std::cout << "   Parent:   " << this->parent << "\n";
+                        std::cout << "   Parent:   " << this->parent.load() << "\n";
                         std::cout << "   Position: " << ((int)this->position) << "\n";
                         valid = false;
                     }
 
                     // check parent key
                     if (valid && this->position != 0 &&
-                            !(comp(this->parent->keys[this->position - 1], keys[0]) < ((isSet) ? 0 : 1))) {
+                            !(comp(this->parent.load()->keys[this->position - 1], keys[0]) < ((isSet) ? 0 : 1))) {
                         std::cout << "Left parent key not lower bound!\n";
                         std::cout << "   Node:     " << this << "\n";
-                        std::cout << "   Parent:   " << this->parent << "\n";
+                        std::cout << "   Parent:   " << this->parent.load() << "\n";
                         std::cout << "   Position: " << ((int)this->position) << "\n";
-                        std::cout << "   Key:   " << (this->parent->keys[this->position]) << "\n";
+                        std::cout << "   Key:   " << (this->parent.load()->keys[this->position]) << "\n";
                         std::cout << "   Lower: " << (keys[0]) << "\n";
                         valid = false;
                     }
 
                     // check parent key
-                    if (valid && this->position != this->parent->numElements &&
-                            !(comp(keys[this->numElements - 1], this->parent->keys[this->position]) <
+                    if (valid && this->position != this->parent.load()->numElements &&
+                            !(comp(keys[this->numElements - 1], this->parent.load()->keys[this->position]) <
                                     ((isSet) ? 0 : 1))) {
                         std::cout << "Right parent key not lower bound!\n";
                         std::cout << "   Node:     " << this << "\n";
-                        std::cout << "   Parent:   " << this->parent << "\n";
+                        std::cout << "   Parent:   " << this->parent.load() << "\n";
                         std::cout << "   Position: " << ((int)this->position) << "\n";
-                        std::cout << "   Key:   " << (this->parent->keys[this->position]) << "\n";
+                        std::cout << "   Key:   " << (this->parent.load()->keys[this->position]) << "\n";
                         std::cout << "   Upper: " << (keys[0]) << "\n";
                         valid = false;
                     }
@@ -1021,19 +1012,11 @@ public:
     using operation_hints = btree_operation_hints<1>;
 
 protected:
-#ifdef IS_PARALLEL
     // a pointer to the root node of this tree
-    node* volatile root;
+    std::atomic<node*> root;
 
     // a lock to synchronize update operations on the root pointer
     lock_type root_lock;
-#else
-    // a pointer to the root node of this tree
-    node* root;
-
-    // required to not duplicate too much code
-    lock_type root_lock;
-#endif
 
     // a pointer to the left-most node of this tree (initial note for iteration)
     leaf_node* leftmost;
@@ -1076,7 +1059,8 @@ public:
 
     // a move constructor
     btree(btree&& other)
-            : comp(other.comp), weak_comp(other.weak_comp), root(other.root), leftmost(other.leftmost) {
+            : comp(other.comp), weak_comp(other.weak_comp), leftmost(other.leftmost) {
+        root = other.root.load();
         other.root = nullptr;
         other.leftmost = nullptr;
     }
@@ -1109,7 +1093,7 @@ public:
 
     // determines the number of elements in this tree
     size_type size() const {
-        return (root) ? root->countEntries() : 0;
+        return (root != nullptr) ? root.load()->countEntries() : 0;
     }
 
     /**
@@ -1304,7 +1288,7 @@ public:
             if (cur->numElements >= node::maxKeys) {
                 // -- lock parents --
                 auto priv = cur;
-                auto parent = priv->parent;
+                auto parent = priv->parent.load();
                 std::vector<node*> parents;
                 do {
                     if (parent) {
@@ -1339,9 +1323,9 @@ public:
                 } while (true);
 
                 // split this node
-                auto old_root = root;
+                auto old_root = root.load();
                 idx -= cur->rebalance_or_split(
-                        const_cast<node**>(&root), root_lock, static_cast<int>(idx), parents);
+                        root, root_lock, static_cast<int>(idx), parents);
 
                 // release parent lock
                 for (auto it = parents.rbegin(); it != parents.rend(); ++it) {
@@ -1466,12 +1450,12 @@ public:
 
             if (cur->numElements >= node::maxKeys) {
                 // split this node
-                idx -= cur->rebalance_or_split(&root, root_lock, static_cast<int>(idx));
+                idx -= cur->rebalance_or_split(root, root_lock, static_cast<int>(idx));
 
                 // insert element in right fragment
                 if (((size_type)idx) > cur->numElements) {
                     idx -= cur->numElements + 1;
-                    cur = cur->parent->getChild(cur->position + 1);
+                    cur = cur->parent.load()->getChild(cur->position + 1);
                 }
             }
 
@@ -1536,7 +1520,7 @@ public:
         if (empty()) {
             return res;
         }
-        return root->collectChunks(res, num, begin(), end());
+        return root.load()->collectChunks(res, num, begin(), end());
     }
 
     /**
@@ -1736,10 +1720,10 @@ public:
      */
     void clear() {
         if (root != nullptr) {
-            if (root->isLeaf()) {
-                delete static_cast<leaf_node*>(root);
+            if (root.load()->isLeaf()) {
+                delete static_cast<leaf_node*>(root.load());
             } else {
-                delete static_cast<inner_node*>(root);
+                delete static_cast<inner_node*>(root.load());
             }
         }
         root = nullptr;
@@ -1771,10 +1755,10 @@ public:
         }
 
         // clone content (deep copy)
-        root = other.root->clone();
+        root = other.root.load()->clone();
 
         // update leftmost reference
-        auto tmp = root;
+        auto tmp = root.load();
         while (!tmp->isLeaf()) {
             tmp = tmp->getChild(0);
         }
@@ -1817,17 +1801,17 @@ public:
 
     // Determines the number of levels contained in this tree.
     size_type getDepth() const {
-        return (empty()) ? 0 : root->getDepth();
+        return (empty()) ? 0 : root.load()->getDepth();
     }
 
     // Determines the number of nodes contained in this tree.
     size_type getNumNodes() const {
-        return (empty()) ? 0 : root->countNodes();
+        return (empty()) ? 0 : root.load()->countNodes();
     }
 
     // Determines the amount of memory used by this data structure
     size_type getMemoryUsage() const {
-        return sizeof(*this) + (empty() ? 0 : root->getMemoryUsage());
+        return sizeof(*this) + (empty() ? 0 : root.load()->getMemoryUsage());
     }
 
     /*
@@ -1839,7 +1823,7 @@ public:
         if (empty()) {
             out << " - empty - \n";
         } else {
-            root->printTree(out, "");
+            root.load()->printTree(out, "");
         }
     }
 
@@ -1851,7 +1835,7 @@ public:
         auto nodes = getNumNodes();
         out << " ---------------------------------\n";
         out << "  Elements: " << size() << "\n";
-        out << "  Depth:    " << (empty() ? 0 : root->getDepth()) << "\n";
+        out << "  Depth:    " << (empty() ? 0 : root.load()->getDepth()) << "\n";
         out << "  Nodes:    " << nodes << "\n";
         out << " ---------------------------------\n";
         out << "  Size of inner node: " << sizeof(inner_node) << "\n";
@@ -1878,7 +1862,7 @@ public:
      * Checks the consistency of this tree.
      */
     bool check() {
-        auto ok = empty() || root->check(comp, root);
+        auto ok = empty() || root.load()->check(comp, root);
         if (!ok) {
             printTree();
         }

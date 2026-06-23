@@ -68,7 +68,7 @@ public:
 #ifdef IS_PARALLEL
 
         // special handling for inserting first element
-        while (this->root == nullptr) {
+        while (this->root.load() == nullptr) {
             // try obtaining root-lock
             if (!this->root_lock.try_start_write()) {
                 // somebody else was faster => re-check
@@ -76,7 +76,7 @@ public:
             }
 
             // check loop condition again
-            if (this->root != nullptr) {
+            if (this->root.load() != nullptr) {
                 // somebody else was faster => normal insert
                 this->root_lock.abort_write();
                 break;
@@ -138,7 +138,7 @@ public:
                 auto root_lease = this->root_lock.start_read();
 
                 // start with root
-                cur = this->root;
+                cur = this->root.load();
 
                 // get lease of the next node to be accessed
                 cur_lease = cur->lock.start_read();
@@ -277,19 +277,19 @@ public:
             if (cur->numElements >= parenttype::node::maxKeys) {
                 // -- lock parents --
                 auto priv = cur;
-                auto parent = priv->parent;
+                auto parent = priv->parent.load();
                 std::vector<typename parenttype::node*> parents;
                 do {
                     if (parent) {
                         parent->lock.start_write();
                         while (true) {
                             // check whether parent is correct
-                            if (parent == priv->parent) {
+                            if (parent == priv->parent.load()) {
                                 break;
                             }
                             // switch parent
                             parent->lock.abort_write();
-                            parent = priv->parent;
+                            parent = priv->parent.load();
                             parent->lock.start_write();
                         }
                     } else {
@@ -307,13 +307,13 @@ public:
 
                     // go one step higher
                     priv = parent;
-                    parent = parent->parent;
+                    parent = parent->parent.load();
 
                 } while (true);
 
                 // split this node
-                auto old_root = this->root;
-                idx -= cur->rebalance_or_split(const_cast<typename parenttype::node**>(&this->root),
+                auto old_root = this->root.load();
+                idx -= cur->rebalance_or_split(this->root,
                         this->root_lock, static_cast<int>(idx), parents);
 
                 // release parent lock
@@ -324,7 +324,7 @@ public:
                     if (parent) {
                         parent->lock.end_write();
                     } else {
-                        if (old_root != this->root) {
+                        if (old_root != this->root.load()) {
                             this->root_lock.end_write();
                         } else {
                             this->root_lock.abort_write();
@@ -380,7 +380,7 @@ public:
         }
 
         // insert using iterative implementation
-        typename parenttype::node* cur = this->root;
+        typename parenttype::node* cur = this->root.load();
 
         auto checkHints = [&](typename parenttype::node* last_insert) {
             if (!last_insert) return false;
@@ -444,13 +444,13 @@ public:
 
             if (cur->numElements >= parenttype::node::maxKeys) {
                 // split this node
-                idx -= cur->rebalance_or_split(const_cast<typename parenttype::node**>(&this->root),
+                idx -= cur->rebalance_or_split(this->root,
                         this->root_lock, static_cast<int>(idx));
 
                 // insert element in right fragment
                 if (((typename parenttype::size_type)idx) > cur->numElements) {
                     idx -= cur->numElements + 1;
-                    cur = cur->parent->getChild(cur->position + 1);
+                    cur = cur->parent.load()->getChild(cur->position + 1);
                 }
             }
 
@@ -517,7 +517,7 @@ public:
         this->root = other.root->clone();
 
         // update leftmost reference
-        auto tmp = this->root;
+        auto tmp = this->root.load();
         while (!tmp->isLeaf()) {
             tmp = tmp->getChild(0);
         }

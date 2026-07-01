@@ -28,7 +28,7 @@ TEST(ParallelUtils, SpinLock) {
 
     SpinLock lock;
 
-    volatile int c = 0;
+    int c = 0;
 
 #ifdef _OPENMP
 #pragma omp parallel for num_threads(4)
@@ -48,7 +48,7 @@ TEST(ParallelUtils, ReadWriteLock) {
 
     ReadWriteLock lock;
 
-    volatile int c = 0;
+    int c = 0;
 
 #ifdef _OPENMP
 #pragma omp parallel for num_threads(4)
@@ -74,7 +74,7 @@ TEST(ParallelUtils, OptimisticReadWriteLock) {
 
     OptimisticReadWriteLock lock;
 
-    volatile int c = 0;
+    int c = 0;
 
 #ifdef _OPENMP
 #pragma omp parallel for num_threads(4)

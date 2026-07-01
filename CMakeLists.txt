@@ -89,6 +89,14 @@ else()
     set(SOUFFLE_ENABLE_TESTING_DEFAULT OFF)
 endif()
 
+# Disable volatile warnings from gcc
+# Unless volatiles are replaced with atomics, these are known and expected uses.
+if(CMAKE_CXX_COMPILER_ID MATCHES "GNU")
+    add_compile_options(-Wno-volatile)
+elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    add_compile_options(-Wno-deprecated-volatile)
+endif()
+
 # --------------------------------------------------
 # User options available from the command line/cache
 # --------------------------------------------------

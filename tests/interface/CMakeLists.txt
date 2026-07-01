@@ -29,9 +29,14 @@ function(SOUFFLE_RUN_CPP_TEST)
   endif()
 
   if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    list(APPEND ADDITIONNAL_FLAGS "-Wno-volatile")
     if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 9)
       list(APPEND ADDITIONNAL_FLAGS "-lstdc++fs")
     endif ()
+  endif()
+
+  if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    list(APPEND ADDITIONNAL_FLAGS "-Wno-deprecated-volatile")
   endif()
 
   if (CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")

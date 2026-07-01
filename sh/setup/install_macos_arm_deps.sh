@@ -8,7 +8,7 @@ set -e
 set -x
 
 # Install requirements of MAC OS X
-brew install libtool mcpp swig bison libffi
+brew install libtool mcpp swig bison libffi libomp
 #brew install gcc@13
 #brew link gcc@13
 

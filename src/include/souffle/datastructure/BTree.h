@@ -1225,6 +1225,10 @@ public:
 
                 // get next pointer
                 auto next = cur->getChild(idx);
+                if (next == nullptr) {
+                    assert(!cur->lock.validate(cur_lease) && "B-tree inner node has null child");
+                    return insert(k, hints);
+                }
 
                 // get lease on next level
                 auto next_lease = next->lock.start_read();

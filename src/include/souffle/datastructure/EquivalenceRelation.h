@@ -101,7 +101,9 @@ public:
     bool insert(value_type x, value_type y, operation_hints) {
         // indicate that iterators will have to generate on request
         this->statesMapStale.store(true, std::memory_order_relaxed);
-        bool retval = !contains(x, y);
+
+        auto lock = std::unique_lock(statesLock);
+        bool retval = !sds.contains(x, y);
         sds.unionNodes(x, y);
         return retval;
     }
@@ -113,6 +115,7 @@ public:
     void insertAll(const EquivalenceRelation<TupleType>& other) {
         other.genAllDisjointSetLists();
 
+        auto lock = std::unique_lock(statesLock);
         // iterate over partitions at a time
         for (auto&& [rep, pl] : other.equivalencePartition) {
             const std::size_t ksize = pl->size();
@@ -199,6 +202,7 @@ public:
      * @param y back of pair
      */
     bool contains(value_type x, value_type y) const {
+        auto lock = std::shared_lock(statesLock);
         return sds.contains(x, y);
     }
 
@@ -229,12 +233,10 @@ public:
      * Empty the relation
      */
     void clear() {
-        statesLock.lock();
+        auto lock = std::unique_lock(statesLock);
 
         sds.clear();
         emptyPartition();
-
-        statesLock.unlock();
     }
 
     /**
@@ -244,7 +246,7 @@ public:
     std::size_t size() const {
         genAllDisjointSetLists();
 
-        statesLock.lock_shared();
+        auto lock = std::shared_lock(statesLock);
 
         std::size_t retVal = 0;
         for (auto& e : this->equivalencePartition) {
@@ -252,7 +254,6 @@ public:
             retVal += s * s;
         }
 
-        statesLock.unlock_shared();
         return retVal;
     }
 
@@ -740,11 +741,10 @@ private:
      * Each set is partitioned into a PiggyList.
      */
     void genAllDisjointSetLists() const {
-        statesLock.lock();
+        auto lock = std::unique_lock(statesLock);
 
         // no need to generate again, already done.
         if (!this->statesMapStale.load(std::memory_order_acquire)) {
-            statesLock.unlock();
             return;
         }
 
@@ -766,7 +766,6 @@ private:
         }
 
         statesMapStale.store(false, std::memory_order_release);
-        statesLock.unlock();
     }
 };
 }  // namespace souffle

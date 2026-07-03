@@ -466,14 +466,14 @@ public:
         detail::Waiter wait;
 
         // set last bit => make it odd
-        auto v = version.fetch_or(0x1, std::memory_order_acquire);
+        auto v = version.fetch_or(0x1, std::memory_order_acq_rel);
 
         // check for concurrent writes
         while ((v & 0x1) == 1) {
             // wait for a moment
             wait();
             // get an updated version
-            v = version.fetch_or(0x1, std::memory_order_acquire);
+            v = version.fetch_or(0x1, std::memory_order_acq_rel);
         }
 
         // done
@@ -486,7 +486,7 @@ public:
      * @return true if write permission has been granted, false otherwise.
      */
     bool try_start_write() {
-        auto v = version.fetch_or(0x1, std::memory_order_acquire);
+        auto v = version.fetch_or(0x1, std::memory_order_acq_rel);
         return !(v & 0x1);
     }
 
@@ -499,7 +499,7 @@ public:
      *      be granted, false otherwise.
      */
     bool try_upgrade_to_write(const Lease& lease) {
-        auto v = version.fetch_or(0x1, std::memory_order_acquire);
+        auto v = version.fetch_or(0x1, std::memory_order_acq_rel);
 
         // check whether write privileges have been gained
         if (v & 0x1) return false;  // there is another writer already
